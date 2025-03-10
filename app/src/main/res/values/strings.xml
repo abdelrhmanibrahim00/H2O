@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">H2O</string>
+    <string name="google_maps_key">${MAPS_API_KEY}</string>
+    <string name="maps_api_key">@string/maps_api_key_placeholder</string>
+</resources>
