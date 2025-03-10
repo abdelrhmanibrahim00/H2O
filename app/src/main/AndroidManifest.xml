@@ -29,10 +29,7 @@
         android:name=".H2OApp"
         tools:targetApi="31">
 
-        <!-- Google Maps API Key -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCTI-RucUpmf6Yn94HmWiVveeuxJwpttpM" />
+     
 
         <!-- Google Play Services Metadata -->
         <meta-data
