@@ -5,7 +5,11 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services) // ✅ Corrected way to apply Google Services
-    id("kotlin-kapt")
+   // id("kotlin-kapt")
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    id("com.google.devtools.ksp") version "1.9.0-1.0.13" // Use the version compatible with your Kotlin version
+
+
 }
 
 android {
@@ -16,7 +20,6 @@ android {
     compileSdk = 35
 
     defaultConfig {
-
         applicationId = "com.h2o.store"
         minSdk = 23
         targetSdk = 35
@@ -33,9 +36,6 @@ android {
         if (localPropertiesFile.exists()) {
             localProperties.load(FileInputStream(localPropertiesFile))
         }
-
-        val mapsApiKey = localProperties["MAPS_API_KEY"] as? String ?: ""
-        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
     }
 
     buildTypes {
@@ -112,7 +112,7 @@ dependencies {
 
     //GMaps
     implementation ("com.google.maps.android:maps-compose:2.15.0")
-    implementation ("com.google.android.gms:play-services-maps:18.1.0")
+    implementation ("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
     // Compose dependencies
@@ -133,7 +133,9 @@ dependencies {
     // Room
     implementation("androidx.room:room-runtime:$room")
     implementation("androidx.room:room-ktx:$room")
-    kapt("androidx.room:room-compiler:$room")
+    //kapt("androidx.room:room-compiler:$room")
+    ksp("androidx.room:room-compiler:$room") // Add this line
+
 
     // Update to the latest versions
     implementation ("com.google.android.gms:play-services-auth:20.7.0")

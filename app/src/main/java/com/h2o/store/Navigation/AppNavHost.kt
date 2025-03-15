@@ -3,6 +3,7 @@ package com.h2o.store.Navigation
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -13,8 +14,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
+import com.h2o.store.Graph.Graph
 import com.h2o.store.Models.CartViewModel
 import com.h2o.store.Models.Location.LocationViewModel
+import com.h2o.store.Models.OrdersViewModel
 import com.h2o.store.Models.ProductViewModel
 import com.h2o.store.Models.ProfileViewModel
 import com.h2o.store.Models.SignUpViewModel
@@ -24,6 +27,8 @@ import com.h2o.store.Screens.EditProfileScreen
 import com.h2o.store.Screens.HomeScreen
 import com.h2o.store.Screens.LoginScreen
 import com.h2o.store.Screens.MapScreen
+import com.h2o.store.Screens.OrderDetailsScreen
+import com.h2o.store.Screens.OrdersScreen
 import com.h2o.store.Screens.ProfileScreen
 import com.h2o.store.Screens.SignUpScreen
 import com.h2o.store.Screens.SplashScreen
@@ -58,12 +63,21 @@ fun AppNavHost(navController: NavHostController, context: Context) {
     val viewModelStoreOwner = navController.currentBackStackEntry?.destination?.parent as? ViewModelStoreOwner
         ?: LocalViewModelStoreOwner.current!!
 
-    // Product ViewModel
-    val productViewModel: ProductViewModel = viewModel(viewModelStoreOwner = viewModelStoreOwner)
-
-    // Authentication and User repositories
+    // Get current user ID
+// Get current user ID with logging
+    val firebaseAuth = FirebaseAuth.getInstance()
+    val currentUser = firebaseAuth.currentUser
+    val currentUserId = currentUser?.uid ?: ""
+    Log.d("AppNavHost", "Current user ID: $currentUserId") //
+    // Repositories
     val authRepository = AuthRepository()
     val userRepository = ProfileRepository()
+
+    // Access repositories via Graph with lazy initialization
+    val orderRepository = Graph.orderRepository
+
+    // Product ViewModel
+    val productViewModel: ProductViewModel = viewModel(viewModelStoreOwner = viewModelStoreOwner)
 
     // Create SignUpViewModel
     val signUpViewModel: SignUpViewModel = viewModel(
@@ -74,6 +88,12 @@ fun AppNavHost(navController: NavHostController, context: Context) {
     // Profile ViewModel
     val profileViewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModel.Factory(userRepository),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+
+    // Orders ViewModel
+    val ordersViewModel: OrdersViewModel = viewModel(
+        factory = OrdersViewModel.Factory(currentUserId, orderRepository),
         viewModelStoreOwner = viewModelStoreOwner
     )
 
@@ -168,9 +188,7 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 onCartClick = { navController.navigate(Screen.Cart.route) },
                 onOrderClick = { navController.navigate(Screen.Orders.route) },
                 // Need to create a user-specific CartViewModel here too
-                cartViewModel = viewModel(factory = CartViewModel.Factory(
-                    FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                )),
+                cartViewModel = viewModel(factory = CartViewModel.Factory(currentUserId)),
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
                 onHelpClick = onHelpClick,
                 onLogoutClick = onLogoutClick
@@ -208,7 +226,8 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 onBackClick = {
                     // Go back to cart when back button is pressed
                     navController.popBackStack()
-                }, onEditAddress = {}
+                },
+                onEditAddress = {}
             )
         }
 
@@ -224,6 +243,41 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             EditProfileScreen(
                 viewModel = profileViewModel,
                 navController = navController
+            )
+        }
+
+        // Add Orders Screen route
+        composable(Screen.Orders.route) {
+            OrdersScreen(
+                navController = navController,
+                ordersViewModel = ordersViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onOrderDetails = { orderId ->
+                    navController.navigate(Screen.OrderDetails.createRoute(orderId))
+                }
+            )
+        }
+
+        // Add Order Details Screen route with parameter
+        composable(
+            route = Screen.OrderDetails.route,
+            arguments = listOf(
+                navArgument("orderId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+
+            OrderDetailsScreen(
+                navController = navController,
+                ordersViewModel = ordersViewModel,
+                orderId = orderId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
     }

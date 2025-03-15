@@ -5,7 +5,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.h2o.store.BuildConfig
+import com.h2o.store.BuildConfig // Replace with your actual package name
 import com.h2o.store.data.models.AddressData
 import com.h2o.store.data.models.GeocodingResult
 import com.h2o.store.data.models.LocationData
@@ -26,6 +26,9 @@ class LocationViewModel(
 ) : ViewModel() {
 
     private val _apiKey = BuildConfig.MAPS_API_KEY
+    init {
+        Log.d("MapsDebug", "API Key: ${_apiKey}")
+    }
     private val _location = MutableStateFlow<LocationData?>(null)
     val location = _location.asStateFlow()
 

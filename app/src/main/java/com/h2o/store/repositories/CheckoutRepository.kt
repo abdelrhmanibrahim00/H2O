@@ -3,14 +3,15 @@ package com.h2o.store.repositories
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.h2o.store.data.Cart.CartItem
-import com.h2o.store.data.Order.Order
-import com.h2o.store.data.Order.OrderItem
+import com.h2o.store.data.Orders.Order
+import com.h2o.store.data.Orders.OrderItem
 import com.h2o.store.data.models.AddressData
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+
 
 class CheckoutRepository {
     private val firestore = FirebaseFirestore.getInstance()
@@ -39,7 +40,7 @@ class CheckoutRepository {
             val deliveryFee = 15.0
 
             // Create new order without the orderId (will be set after Firebase generates it)
-            val order = com.h2o.store.data.models.Order(
+            val order = Order(
                 orderId = "", // This will be set after Firebase generates the ID
                 userId = userId,
                 items = orderItems,

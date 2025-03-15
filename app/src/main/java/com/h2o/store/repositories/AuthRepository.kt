@@ -164,7 +164,8 @@ class AuthRepository {
                             "district" to district,
                             "location" to locationMap,        // Geolocation data
                             "address" to addressMap,          // Structured address data
-                            "created_at" to FieldValue.serverTimestamp()
+                            "created_at" to FieldValue.serverTimestamp(),
+                            "Role" to "user"
                         )
 
                         Log.d(TAG, "Writing user data to Firestore, uid: ${user.uid}")

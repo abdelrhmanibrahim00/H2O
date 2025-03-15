@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.h2o.store.data.Cart.CartDatabase
 import com.h2o.store.data.Cart.CartRepository
+import com.h2o.store.repositories.OrderRepository
 import com.h2o.store.repositories.ProductRepository
 
 object Graph {
@@ -16,6 +17,11 @@ object Graph {
     val productRepository by lazy {
         ProductRepository()  // Initialize with Firestore
     }
+    // Add order repository with lazy initialization
+    val orderRepository by lazy {
+        OrderRepository()  // Initialize with Firestore
+    }
+
 
     fun provide(context: Context) {
         database = Room.databaseBuilder(
