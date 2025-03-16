@@ -64,8 +64,8 @@ class CartViewModel(
                     productId = product.id,
                     quantity = 1,
                     productName = product.name,
-                    productPrice = product.price,
-                    priceAfterDiscount = product.price_after_discount,
+                    productPrice = product.price.toInt(),
+                    priceAfterDiscount = 9,
                     productImage = product.Image,
                     userId = userId  // Set the user ID for new cart items
                 )

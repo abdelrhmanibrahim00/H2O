@@ -96,6 +96,50 @@ class OrderRepository {
             listenerRegistration.remove()
         }
     }
+    // Update order information
+    suspend fun updateOrder(order: Order): Boolean {
+        return try {
+            Log.d(TAG, "Updating order: ${order.orderId}")
+
+            // Create a map of fields to update
+            val updates = mapOf(
+                "status" to order.status,
+                "paymentMethod" to order.paymentMethod,
+                "deliveryFee" to order.deliveryFee,
+                "subtotal" to order.subtotal,
+                "total" to order.total,
+                "estimatedDelivery" to order.estimatedDelivery
+            )
+
+            // Handle deliveryAddress separately since it's a nested object
+            val addressUpdates = order.deliveryAddress?.let {
+                mapOf(
+                    "deliveryAddress.street" to it.street,
+                    "deliveryAddress.city" to it.city,
+                    "deliveryAddress.state" to it.state,
+                    "deliveryAddress.country" to it.country,
+                    "deliveryAddress.postalCode" to it.postalCode,
+                    "deliveryAddress.formattedAddress" to it.formattedAddress
+                )
+            } ?: mapOf()
+
+            // Combine all updates
+            val allUpdates = updates + addressUpdates
+
+            // Perform the update
+            ordersCollection.document(order.orderId)
+                .update(allUpdates)
+                .await()
+
+            // Log success
+            Log.d(TAG, "Order successfully updated: ${order.orderId}")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating order: ${e.message}")
+            Log.e(TAG, "Stack trace: ", e)
+            false
+        }
+    }
 
     // Get orders by status (for filtering in the delivery dashboard)
     fun getOrdersByStatusFlow(status: String): Flow<List<Order>> = callbackFlow {

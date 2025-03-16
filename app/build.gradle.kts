@@ -88,6 +88,7 @@ dependencies {
     implementation(libs.places)
     implementation(libs.androidx.constraintlayout.compose.android)
     implementation(libs.androidx.foundation.layout.android)
+    implementation(libs.androidx.constraintlayout)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

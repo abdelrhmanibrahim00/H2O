@@ -36,6 +36,42 @@ sealed class Screen(val title: String = "", val route: String) {
             return "admin_order_details_screen/$orderId"
         }
     }
+// Admin edit screen
+    object EditOrder : Screen(route ="edit_order_screen/{orderId}") {
+        fun createRoute(orderId: String): String {
+            return "edit_order_screen/$orderId"
+        }
+    }
+
+    // User management screens
+    object ManageUsers : Screen(route="manage_users_screen")
+
+    object UserDetails : Screen(route="user_details_screen/{userId}") {
+        fun createRoute(userId: String): String {
+            return "user_details_screen/$userId"
+        }
+    }
+
+    object EditUser : Screen(route="edit_user_screen/{userId}") {
+        fun createRoute(userId: String): String {
+            return "edit_user_screen/$userId"
+        }
+    }
+
+    // Product management screens
+    object ManageProducts : Screen(route="manage_products_screen")
+
+    object ProductDetails : Screen(route="product_details_screen/{productId}") {
+        fun createRoute(productId: String): String {
+            return "product_details_screen/$productId"
+        }
+    }
+
+    object EditProduct : Screen(route="edit_product_screen/{productId}") {
+        fun createRoute(productId: String): String {
+            return "edit_product_screen/$productId"
+        }
+    }
 
 
 

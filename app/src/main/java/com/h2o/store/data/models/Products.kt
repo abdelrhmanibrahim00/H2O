@@ -8,7 +8,8 @@ data class Product(
     val price: Int = 0,
     val price_after_discount: Int = 0,
     val quantity: Int = 0,
-    val stock: Int = 0
+    val stock: Int = 0,
+    val description: String = "",
 )
 
 data class ProductResponse(

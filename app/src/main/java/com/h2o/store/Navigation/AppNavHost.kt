@@ -16,7 +16,11 @@ import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.h2o.store.Graph.Graph
 import com.h2o.store.Screens.Admin.AdminOrderDetailsScreen
+import com.h2o.store.Screens.Admin.EditOrderScreen
+import com.h2o.store.Screens.Admin.EditUserScreen
 import com.h2o.store.Screens.Admin.ManageOrdersScreen
+import com.h2o.store.Screens.Admin.ManageUsersScreen
+import com.h2o.store.Screens.Admin.UserDetailsScreen
 import com.h2o.store.Screens.AdminHomeScreen
 import com.h2o.store.Screens.DeliveryHomeScreen
 import com.h2o.store.Screens.EditProfileScreen
@@ -33,6 +37,8 @@ import com.h2o.store.Screens.User.SignUpScreen
 import com.h2o.store.Utils.LocationUtils
 import com.h2o.store.ViewModels.Admin.AdminViewModel
 import com.h2o.store.ViewModels.Admin.ManageOrdersViewModel
+//import com.h2o.store.ViewModels.Admin.ManageProductsViewModel
+import com.h2o.store.ViewModels.Admin.ManageUsersViewModel
 import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.ViewModels.User.DeliveryViewModel
@@ -78,7 +84,10 @@ fun AppNavHost(navController: NavHostController, context: Context) {
     Log.d("AppNavHost", "Current user ID: $currentUserId") //
     // Repositories
     val authRepository = AuthRepository()
-    val userRepository = ProfileRepository()
+    val profileRepository = ProfileRepository()
+    //user repository
+    val userRepository = Graph.userRepository
+
 
     // Access repositories via Graph with lazy initialization
     val orderRepository = Graph.orderRepository
@@ -94,7 +103,7 @@ fun AppNavHost(navController: NavHostController, context: Context) {
 
     // Profile ViewModel
     val profileViewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModel.Factory(userRepository),
+        factory = ProfileViewModel.Factory(profileRepository),
         viewModelStoreOwner = viewModelStoreOwner
     )
 
@@ -106,11 +115,30 @@ fun AppNavHost(navController: NavHostController, context: Context) {
     val adminViewModel: AdminViewModel = viewModel(
         factory = AdminViewModel.Factory(
             orderRepository,
-            userRepository,
+            profileRepository,
             Graph.productRepository
         ),
         viewModelStoreOwner = viewModelStoreOwner
     )
+
+    val manageOrdersViewModel: ManageOrdersViewModel = viewModel(
+        factory = ManageOrdersViewModel.Factory(
+            orderRepository,
+        ),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+    val manageusersViewModel: ManageUsersViewModel = viewModel(
+        factory = ManageUsersViewModel.Factory(
+            userRepository
+        ),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+//    val manageProductViewModel: ManageProductsViewModel = viewModel(
+//        factory = ProductViewModel.Factory(
+//            Graph.productRepository,
+//        ),
+//        viewModelStoreOwner = viewModelStoreOwner
+//    )
     // Initialize delivery view model for delivery personnel
     val deliveryViewModel: DeliveryViewModel = viewModel(
         factory = DeliveryViewModel.Factory(orderRepository),
@@ -319,13 +347,13 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 navController = navController,
                 adminViewModel = adminViewModel,
                 onManageProducts = {
-                    // This would navigate to a product management screen when implemented
+                    navController.navigate(Screen.ManageProducts.route)
                 },
                 onManageOrders = {
                     navController.navigate(Screen.ManageOrders.route)
                 },
                 onManageUsers = {
-                    // This would navigate to a user management screen when implemented
+                    navController.navigate(Screen.ManageUsers.route)
                 },
                 onViewReports = {
                     // This would navigate to a reporting screen when implemented
@@ -334,15 +362,11 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             )
         }
 
-// Manage Orders Screen
+         // Manage Orders Screen
         composable(Screen.ManageOrders.route) {
             ManageOrdersScreen(
                 navController = navController,
-                viewModel = viewModel(
-                    factory = ManageOrdersViewModel.Factory(
-                        orderRepository = orderRepository
-                    )
-                ),
+                viewModel =manageOrdersViewModel,
                 onOrderDetails = { orderId ->
                     navController.navigate(Screen.AdminOrderDetails.createRoute(orderId))
                 },
@@ -352,7 +376,7 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             )
         }
 
-// Admin Order Details Screen
+     // Admin Order Details Screen
         composable(
             route = Screen.AdminOrderDetails.route,
             arguments = listOf(
@@ -365,17 +389,154 @@ fun AppNavHost(navController: NavHostController, context: Context) {
 
             AdminOrderDetailsScreen(
                 navController = navController,
-                viewModel = viewModel(
-                    factory = ManageOrdersViewModel.Factory(
-                        orderRepository = orderRepository
-                    )
-                ),
+                viewModel = manageOrdersViewModel,
+                orderId = orderId,
+                onBackClick = {
+                    navController.popBackStack()
+                },onEditClick = {orderId->
+                    manageOrdersViewModel.resetEditOrderResult()
+                    navController.navigate(Screen.EditOrder.createRoute(orderId))}
+            )
+        }
+        // Then add this composable to your NavHost in AppNavHost.kt:
+        composable(
+            route = Screen.EditOrder.route,
+            arguments = listOf(
+                navArgument("orderId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+
+            EditOrderScreen(
+                navController = navController,
+                viewModel = manageOrdersViewModel,
                 orderId = orderId,
                 onBackClick = {
                     navController.popBackStack()
                 }
             )
         }
+
+        // Manage Users Screen
+        composable(Screen.ManageUsers.route) {
+            ManageUsersScreen(
+                navController = navController,
+                viewModel = manageusersViewModel,
+                onUserDetails = { userId ->
+                    navController.navigate(Screen.UserDetails.createRoute(userId))
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+// User Details Screen
+        composable(
+            route = Screen.UserDetails.route,
+            arguments = listOf(
+                navArgument("userId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+
+            UserDetailsScreen(
+                navController = navController,
+                viewModel = manageusersViewModel,
+                userId = userId,
+                onEditUser = { id ->
+                    navController.navigate(Screen.EditUser.createRoute(id))
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+// Edit User Screen
+        composable(
+            route = Screen.EditUser.route,
+            arguments = listOf(
+                navArgument("userId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+
+            EditUserScreen(
+                navController = navController,
+                viewModel = manageusersViewModel,
+                userId = userId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
+//        // Manage Products Screen
+//        composable(Screen.ManageProducts.route) {
+//            ManageProductsScreen(
+//                navController = navController,
+//                viewModel = manageProductViewModel,
+//                onProductDetails = { productId ->
+//                    navController.navigate(Screen.ProductDetails.createRoute(productId))
+//                },
+//                onBackClick = {
+//                    navController.popBackStack()
+//                }
+//            )
+//        }
+//
+//// Product Details Screen
+//        composable(
+//            route = Screen.ProductDetails.route,
+//            arguments = listOf(
+//                navArgument("productId") {
+//                    type = NavType.StringType
+//                }
+//            )
+//        ) { backStackEntry ->
+//            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+//
+//            ProductDetailsScreen(
+//                navController = navController,
+//                viewModel = manageProductViewModel,
+//                productId = productId,
+//                onEditProduct = { id ->
+//                    navController.navigate(Screen.EditProduct.createRoute(id))
+//                },
+//                onBackClick = {
+//                    navController.popBackStack()
+//                }
+//            )
+//        }
+//
+//// Edit Product Screen
+//        composable(
+//            route = Screen.EditProduct.route,
+//            arguments = listOf(
+//                navArgument("productId") {
+//                    type = NavType.StringType
+//                }
+//            )
+//        ) { backStackEntry ->
+//            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+//
+//            EditProductScreen(
+//                navController = navController,
+//                viewModel = manageProductViewModel,
+//                productId = productId,
+//                onBackClick = {
+//                    navController.popBackStack()
+//                }
+//            )
+//        }
 
         // Delivery Home Screen
         composable(Screen.DeliveryHome.route) {

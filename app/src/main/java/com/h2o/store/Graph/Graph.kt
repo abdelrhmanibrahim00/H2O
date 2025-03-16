@@ -6,6 +6,7 @@ import com.h2o.store.data.Cart.CartDatabase
 import com.h2o.store.data.Cart.CartRepository
 import com.h2o.store.repositories.Admin.OrderRepository
 import com.h2o.store.repositories.ProductRepository
+import com.h2o.store.repositories.UserRepository
 
 object Graph {
     private lateinit var database: CartDatabase
@@ -21,6 +22,11 @@ object Graph {
     val orderRepository by lazy {
         OrderRepository()  // Initialize with Firestore
     }
+    // Add user repository with lazy initialization
+    val userRepository by lazy {
+        UserRepository()  // Initialize with Firestore
+    }
+
 
 
     fun provide(context: Context) {

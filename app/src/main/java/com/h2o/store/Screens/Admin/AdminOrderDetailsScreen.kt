@@ -62,7 +62,8 @@ fun AdminOrderDetailsScreen(
     navController: NavHostController,
     viewModel: ManageOrdersViewModel,
     orderId: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onEditClick : (String) -> Unit
 ) {
     var order by remember { mutableStateOf<Order?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -130,7 +131,7 @@ fun AdminOrderDetailsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Navigate to edit screen */ }) {
+                    IconButton(onClick = { onEditClick(orderId) }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
                 }

@@ -11,5 +11,7 @@ data class UserData(
     val whatsapp: String? = null,
     val address: AddressData? = null,
     val city: String = "",
-    val district: String = ""
+    val district: String = "",
+    val role: String = "user"  // Default role is "user"
+
 )
