@@ -1,6 +1,6 @@
 package com.h2o.store.repositories
 
-
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.h2o.store.data.Cart.CartItem
 import com.h2o.store.data.Orders.Order
@@ -12,19 +12,24 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-
 class CheckoutRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val ordersCollection = firestore.collection("orders")
+    private val TAG = "CheckoutRepository"
 
     suspend fun placeOrder(
         userId: String,
         cartItems: List<CartItem>,
         subtotal: Double,
         paymentMethod: String,
-        address: AddressData
+        address: AddressData,
+        userName: String = "",
+        userPhone: String = "",
+        userEmail: String = ""
     ): Boolean {
         return try {
+            Log.d(TAG, "Placing order for user: $userId, items: ${cartItems.size}")
+
             // Convert cart items to order items
             val orderItems = cartItems.map { cartItem ->
                 OrderItem(
@@ -54,6 +59,13 @@ class CheckoutRepository {
                 deliveryAddress = address
             )
 
+            // Additional user info to store with the order
+            val additionalInfo = mapOf(
+                "userName" to userName,
+                "userPhone" to userPhone,
+                "userEmail" to userEmail
+            )
+
             // Save order to Firestore using suspendCoroutine and let Firebase generate a unique ID
             suspendCoroutine<Boolean> { continuation ->
                 // Let Firebase generate a unique document ID
@@ -62,16 +74,22 @@ class CheckoutRepository {
                 // Create a new order object with the Firebase-generated ID
                 val orderWithId = order.copy(orderId = newDocRef.id)
 
-                // Save the order with the Firebase-generated ID
-                newDocRef.set(orderWithId)
+                // Prepare the data to save, combining the order with additional user info
+                val orderData = orderWithId.toMap() + additionalInfo
+
+                // Save the order with the Firebase-generated ID and additional user info
+                newDocRef.set(orderData)
                     .addOnSuccessListener {
+                        Log.d(TAG, "Order successfully placed with ID: ${newDocRef.id}")
                         continuation.resume(true)
                     }
                     .addOnFailureListener { e ->
+                        Log.e(TAG, "Error placing order: ${e.message}")
                         continuation.resumeWithException(e)
                     }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Exception in placeOrder: ${e.message}")
             throw e
         }
     }
@@ -101,5 +119,22 @@ class CheckoutRepository {
         calendar.time = Date()
         calendar.add(java.util.Calendar.DAY_OF_MONTH, 3)
         return calendar.time
+    }
+
+    // Extension function to convert Order to Map for Firestore
+    private fun Order.toMap(): Map<String, Any?> {
+        return mapOf(
+            "orderId" to orderId,
+            "userId" to userId,
+            "items" to items,
+            "subtotal" to subtotal,
+            "deliveryFee" to deliveryFee,
+            "total" to total,
+            "status" to status,
+            "paymentMethod" to paymentMethod,
+            "orderDate" to orderDate,
+            "estimatedDelivery" to estimatedDelivery,
+            "deliveryAddress" to deliveryAddress
+        )
     }
 }

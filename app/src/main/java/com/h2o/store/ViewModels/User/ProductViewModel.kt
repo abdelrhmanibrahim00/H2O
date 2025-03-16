@@ -1,4 +1,4 @@
-package com.h2o.store.Models
+package com.h2o.store.ViewModels.User
 
 import android.util.Log
 import androidx.lifecycle.ViewModel

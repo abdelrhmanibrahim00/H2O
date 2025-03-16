@@ -26,8 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.h2o.store.Models.ProfileState
-import com.h2o.store.Models.ProfileViewModel
+import com.h2o.store.ViewModels.User.ProfileState
+import com.h2o.store.ViewModels.User.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

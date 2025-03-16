@@ -1,4 +1,4 @@
-package com.h2o.store.Screens
+package com.h2o.store.Screens.User
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.h2o.store.Models.OrdersViewModel
+import com.h2o.store.ViewModels.User.OrdersViewModel
 import com.h2o.store.data.Orders.Order
 import com.h2o.store.data.Orders.OrderItem
 

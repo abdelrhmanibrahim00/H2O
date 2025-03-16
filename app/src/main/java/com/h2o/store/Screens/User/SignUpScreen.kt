@@ -1,4 +1,4 @@
-package com.h2o.store.Screens
+package com.h2o.store.Screens.User
 
 import android.Manifest
 import android.content.Context
@@ -47,9 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.h2o.store.Models.Location.LocationViewModel
-import com.h2o.store.Models.SignUpViewModel
-import com.h2o.store.Models.SignUpViewModel.SignUpState
+import com.h2o.store.ViewModels.Location.LocationViewModel
+import com.h2o.store.ViewModels.User.SignUpViewModel
+import com.h2o.store.ViewModels.User.SignUpViewModel.SignUpState
 import com.h2o.store.Navigation.Screen
 import com.h2o.store.R
 import com.h2o.store.Utils.LocationUtils

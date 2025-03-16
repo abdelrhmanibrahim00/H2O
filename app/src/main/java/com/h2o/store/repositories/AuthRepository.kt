@@ -15,9 +15,14 @@ class AuthRepository {
     private val TAG = "AuthRepository" // Add this at the top of your class
 
 
-    fun loginUser(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
-        // REMOVED: firebaseAuth.signOut() - This was causing inconsistent login
+    // Add a data class to represent the login result with role information
+    data class LoginResult(
+        val success: Boolean,
+        val errorMessage: String? = null,
+        val role: String? = null
+    )
 
+    fun loginUser(email: String, password: String, onResult: (LoginResult) -> Unit) {
         Log.d(TAG, "Attempting login with email: $email")
 
         firebaseAuth.signInWithEmailAndPassword(email, password)
@@ -25,7 +30,7 @@ class AuthRepository {
                 val user = authResult.user
                 if (user == null) {
                     Log.e(TAG, "Login succeeded but user is null")
-                    onResult(false, "Authentication error, please try again")
+                    onResult(LoginResult(false, "Authentication error, please try again"))
                     return@addOnSuccessListener
                 }
 
@@ -46,25 +51,26 @@ class AuthRepository {
 
                             // Sign out the user
                             firebaseAuth.signOut()
-                            onResult(false, "Please verify your email before logging in. A new verification email has been sent.")
+                            onResult(LoginResult(false, "Please verify your email before logging in. A new verification email has been sent."))
                             return@addOnSuccessListener
                         }
 
-                        // Add check for user document
-                        checkUserDocument(user.uid) { exists ->
+                        // Check user document and fetch role
+                        fetchUserRole(user.uid) { exists, role ->
                             if (!exists) {
                                 // Create a basic user document if it doesn't exist
                                 createBasicUserDocument(user.uid, user.email ?: "")
+                                // Default role is "user" for newly created documents
+                                onResult(LoginResult(true, null, "user"))
+                            } else {
+                                // Return the role with the success result
+                                onResult(LoginResult(true, null, role))
                             }
-
-                            // Successfully authenticated with verified email
-                            Log.d(TAG, "Login successful")
-                            onResult(true, null)
                         }
                     }
                     .addOnFailureListener { e ->
                         Log.e(TAG, "Token refresh failed: ${e.message}")
-                        onResult(false, "Authentication session error. Please try again.")
+                        onResult(LoginResult(false, "Authentication session error. Please try again."))
                     }
             }
             .addOnFailureListener { e ->
@@ -78,7 +84,7 @@ class AuthRepository {
                     else -> "Login failed: ${e.message}"
                 }
 
-                onResult(false, errorMessage)
+                onResult(LoginResult(false, errorMessage))
             }
     }
 
@@ -91,7 +97,6 @@ class AuthRepository {
                 onResult(false, "Failed to send reset email: ${e.message}")
             }
     }
-
 
     fun signUpUser(
         name: String,
@@ -210,18 +215,18 @@ class AuthRepository {
             }
     }
 
-    fun logoutUser(onComplete: () -> Unit) {
-        try {
-            Log.d(TAG, "Logging out user: ${firebaseAuth.currentUser?.email}")
-            firebaseAuth.signOut()
-            Log.d(TAG, "User logged out successfully")
-            onComplete()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during logout: ${e.message}")
-            // Still call onComplete even if there's an error to ensure UI updates
-            onComplete()
+        fun logoutUser(onComplete: () -> Unit) {
+            try {
+                Log.d(TAG, "Logging out user: ${firebaseAuth.currentUser?.email}")
+                firebaseAuth.signOut()
+                Log.d(TAG, "User logged out successfully")
+                onComplete()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during logout: ${e.message}")
+                // Still call onComplete even if there's an error to ensure UI updates
+                onComplete()
+            }
         }
-    }
 
     // New helper method to check if a user document exists
     private fun checkUserDocument(userId: String, onResult: (Boolean) -> Unit) {
@@ -237,6 +242,27 @@ class AuthRepository {
             }
     }
 
+    // New method to fetch the user's role
+    private fun fetchUserRole(userId: String, onResult: (Boolean, String?) -> Unit) {
+        firestore.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    // Extract the role from the document, defaulting to "user" if not found
+                    val role = document.getString("Role") ?: "user"
+                    Log.d(TAG, "User document exists, role: $role")
+                    onResult(true, role)
+                } else {
+                    Log.d(TAG, "User document does not exist")
+                    onResult(false, null)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error checking user document: ${e.message}")
+                // If we can't check, assume it's a user to be safe
+                onResult(false, "user")
+            }
+    }
+
     // New helper method to create a basic user document if it doesn't exist
     private fun createBasicUserDocument(userId: String, email: String) {
         val userData = hashMapOf(
@@ -246,7 +272,8 @@ class AuthRepository {
             "whatsapp" to "",
             "city" to "",
             "district" to "",
-            "created_at" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            "created_at" to FieldValue.serverTimestamp(),
+            "Role" to "user"  // Default role is "user"
         )
 
         Log.d(TAG, "Creating basic user document for ID: $userId")

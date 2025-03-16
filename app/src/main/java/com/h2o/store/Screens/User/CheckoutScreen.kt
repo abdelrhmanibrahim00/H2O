@@ -1,4 +1,4 @@
-package com.h2o.store.Screens
+package com.h2o.store.Screens.User
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,10 +59,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
-import com.h2o.store.Models.CartViewModel
-import com.h2o.store.Models.CheckoutViewModel
+import com.h2o.store.ViewModels.User.CartViewModel
+import com.h2o.store.ViewModels.User.CheckoutViewModel
 import com.h2o.store.data.Cart.CartItem
-import com.h2o.store.data.models.AddressData
+import com.h2o.store.data.User.UserData
 import kotlinx.coroutines.launch
 
 // Wrapper composable that initializes the CartViewModel with the current user ID
@@ -127,8 +127,8 @@ fun CheckoutScreen(
     val error by checkoutViewModel.error.collectAsState()
 
     // Address state
-    val userAddress by checkoutViewModel.userAddress.collectAsState()
-    val isAddressLoading by checkoutViewModel.isAddressLoading.collectAsState()
+    val userAddress by checkoutViewModel.userData.collectAsState()
+    val isAddressLoading by checkoutViewModel.isUserDataLoading.collectAsState()
 
     // Monitor for order success and trigger navigation if needed
     LaunchedEffect(orderSuccess) {
@@ -221,7 +221,7 @@ fun CheckoutContent(
     cartItems: List<CartItem>,
     totalPrice: Double,
     isProcessing: Boolean,
-    userAddress: AddressData?,
+    userAddress: UserData?,
     isAddressLoading: Boolean,
     onEditAddress: () -> Unit,
     onPlaceOrder: (String) -> Unit,
@@ -321,12 +321,14 @@ fun CheckoutContent(
                         }
                         else -> {
                             Column {
-                                Text(
-                                    text = userAddress.formattedAddress.ifEmpty {
-                                        "${userAddress.street}, ${userAddress.city}, ${userAddress.state}, ${userAddress.country} ${userAddress.postalCode}"
-                                    },
-                                    style = MaterialTheme.typography.body1
-                                )
+                                userAddress.address?.formattedAddress?.let {
+                                    Text(
+                                        text = it.ifEmpty {
+                                            "${userAddress.address.street}, ${userAddress.address.city}, ${userAddress.address.state}, ${userAddress.address.country} ${userAddress.address.postalCode}"
+                                        },
+                                        style = MaterialTheme.typography.body1
+                                    )
+                                }
                             }
                         }
                     }

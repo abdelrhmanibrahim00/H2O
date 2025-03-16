@@ -19,11 +19,24 @@ sealed class Screen(val title: String = "", val route: String) {
         fun createRoute(orderId: String) = "order_details/$orderId"
     }
 
+    // Role-based screens
+    object AdminHome : Screen(route = "admin_home")
+    object DeliveryHome : Screen(route = "delivery_home")
+
     // New checkout screens
     object Checkout : Screen(title = "Checkout", route = "checkout")
     object OrderConfirmation : Screen(title = "Order Confirmation", route = "order_confirmation/{orderId}") {
         fun createRoute(orderId: String) = "order_confirmation/$orderId"
     }
+
+    // Admin management screens
+    object ManageOrders : Screen(route="manage_orders_screen")
+    object AdminOrderDetails : Screen(route="admin_order_details_screen/{orderId}") {
+        fun createRoute(orderId: String): String {
+            return "admin_order_details_screen/$orderId"
+        }
+    }
+
 
 
 

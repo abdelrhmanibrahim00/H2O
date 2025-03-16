@@ -1,4 +1,4 @@
-package com.h2o.store.Screens
+package com.h2o.store.Screens.User
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,12 +55,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
-import com.h2o.store.Models.CartViewModel
+import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.Navigation.Screen
 import com.h2o.store.data.Cart.CartItem
 import kotlinx.coroutines.launch
@@ -75,16 +74,12 @@ fun CartScreenWrapper(
     onOrderClick: () -> Unit,
     onProfileClick: () -> Unit,
     onHelpClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit ,
+    cartViewModel: CartViewModel
 ) {
     // Get current user ID from Firebase Auth
     val currentUser = FirebaseAuth.getInstance().currentUser
     val userId = currentUser?.uid ?: ""
-
-    // Create user-specific CartViewModel using the Factory
-    val cartViewModel: CartViewModel = viewModel(
-        factory = CartViewModel.Factory(userId)
-    )
 
     // Use the existing CartScreen composable with the user-specific ViewModel
     CartScreen(

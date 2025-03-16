@@ -1,4 +1,4 @@
-package com.h2o.store.Models
+package com.h2o.store.ViewModels.User
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -34,12 +34,13 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
         _loginState.value = LoginState.Loading
 
-        // Call Firebase Authentication
-        authRepository.loginUser(_email.value, _password.value) { success, error ->
-            if (success) {
-                _loginState.value = LoginState.Success
+        // Call Firebase Authentication with the updated API
+        authRepository.loginUser(_email.value, _password.value) { result ->
+            if (result.success) {
+                // Set the login state with the role information
+                _loginState.value = LoginState.Success(result.role ?: "user")
             } else {
-                _loginState.value = LoginState.Error(error ?: "Login failed.")
+                _loginState.value = LoginState.Error(result.errorMessage ?: "Login failed.")
             }
         }
     }
@@ -55,10 +56,9 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
     }
 }
 
-
 sealed class LoginState {
     object Idle : LoginState()
     object Loading : LoginState()
-    object Success : LoginState()
+    data class Success(val role: String) : LoginState()  // Modified to include role
     data class Error(val message: String) : LoginState()
 }

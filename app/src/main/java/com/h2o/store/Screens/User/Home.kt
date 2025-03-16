@@ -1,4 +1,4 @@
-package com.h2o.store.Screens
+package com.h2o.store.Screens.User
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,16 +71,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.h2o.store.Models.CartViewModel
-import com.h2o.store.Models.ProductViewModel
+import com.h2o.store.ViewModels.User.CartViewModel
+import com.h2o.store.ViewModels.User.ProductViewModel
 import com.h2o.store.Navigation.Screen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun HomeScreen(productViewModel: ProductViewModel,cartViewModel: CartViewModel, navController: NavHostController, onCartClick : () -> Unit,
-               onHomeClick : () -> Unit, onOrderClick : () -> Unit , onProfileClick: () -> Unit,onHelpClick: () -> Unit,onLogoutClick: () -> Unit
+fun HomeScreen(productViewModel: ProductViewModel, cartViewModel: CartViewModel, navController: NavHostController, onCartClick : () -> Unit,
+               onHomeClick : () -> Unit, onOrderClick : () -> Unit, onProfileClick: () -> Unit, onHelpClick: () -> Unit, onLogoutClick: () -> Unit
 ) {
     // Initialize necessary components
     val scaffoldState = rememberScaffoldState()
@@ -329,8 +329,8 @@ fun BottomSheetContent() {
 
 @Composable
 private fun MainContent(cartViewModel: CartViewModel,
-    productViewModel: ProductViewModel,
-    paddingValues: PaddingValues
+                        productViewModel: ProductViewModel,
+                        paddingValues: PaddingValues
 ) {
     val productState by productViewModel.productState.collectAsState()
 

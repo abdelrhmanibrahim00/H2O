@@ -1,4 +1,4 @@
-package com.h2o.store.Models
+package com.h2o.store.ViewModels.User
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -82,7 +82,8 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
             } catch (e: Exception) {
                 // Handle possible auth exceptions
                 if (e is FirebaseAuthInvalidUserException) {
-                    _profileState.value = ProfileState.Error("Your session has expired. Please login again.")
+                    _profileState.value =
+                        ProfileState.Error("Your session has expired. Please login again.")
                     return@launch
                 }
             }
@@ -100,7 +101,8 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
                         _city.value = user.city
                     },
                     onFailure = { e ->
-                        _profileState.value = ProfileState.Error(e.message ?: "Unknown error occurred")
+                        _profileState.value =
+                            ProfileState.Error(e.message ?: "Unknown error occurred")
                     }
                 )
             }

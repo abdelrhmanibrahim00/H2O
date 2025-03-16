@@ -16,7 +16,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.h2o.store.Models.Location.LocationViewModel
+import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.data.models.LocationData
 import java.util.Locale
 

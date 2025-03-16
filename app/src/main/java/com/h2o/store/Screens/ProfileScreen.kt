@@ -38,8 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.h2o.store.Models.ProfileState
-import com.h2o.store.Models.ProfileViewModel
+import com.h2o.store.ViewModels.User.ProfileState
+import com.h2o.store.ViewModels.User.ProfileViewModel
 import com.h2o.store.repositories.User
 
 @OptIn(ExperimentalMaterial3Api::class)

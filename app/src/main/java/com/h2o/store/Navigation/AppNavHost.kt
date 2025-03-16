@@ -15,24 +15,31 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.h2o.store.Graph.Graph
-import com.h2o.store.Models.CartViewModel
-import com.h2o.store.Models.Location.LocationViewModel
-import com.h2o.store.Models.OrdersViewModel
-import com.h2o.store.Models.ProductViewModel
-import com.h2o.store.Models.ProfileViewModel
-import com.h2o.store.Models.SignUpViewModel
-import com.h2o.store.Screens.CartScreenWrapper
-import com.h2o.store.Screens.CheckoutScreenWrapper
+import com.h2o.store.Screens.Admin.AdminOrderDetailsScreen
+import com.h2o.store.Screens.Admin.ManageOrdersScreen
+import com.h2o.store.Screens.AdminHomeScreen
+import com.h2o.store.Screens.DeliveryHomeScreen
 import com.h2o.store.Screens.EditProfileScreen
-import com.h2o.store.Screens.HomeScreen
 import com.h2o.store.Screens.LoginScreen
-import com.h2o.store.Screens.MapScreen
-import com.h2o.store.Screens.OrderDetailsScreen
-import com.h2o.store.Screens.OrdersScreen
 import com.h2o.store.Screens.ProfileScreen
-import com.h2o.store.Screens.SignUpScreen
 import com.h2o.store.Screens.SplashScreen
+import com.h2o.store.Screens.User.CartScreenWrapper
+import com.h2o.store.Screens.User.CheckoutScreenWrapper
+import com.h2o.store.Screens.User.HomeScreen
+import com.h2o.store.Screens.User.MapScreen
+import com.h2o.store.Screens.User.OrderDetailsScreen
+import com.h2o.store.Screens.User.OrdersScreen
+import com.h2o.store.Screens.User.SignUpScreen
 import com.h2o.store.Utils.LocationUtils
+import com.h2o.store.ViewModels.Admin.AdminViewModel
+import com.h2o.store.ViewModels.Admin.ManageOrdersViewModel
+import com.h2o.store.ViewModels.Location.LocationViewModel
+import com.h2o.store.ViewModels.User.CartViewModel
+import com.h2o.store.ViewModels.User.DeliveryViewModel
+import com.h2o.store.ViewModels.User.OrdersViewModel
+import com.h2o.store.ViewModels.User.ProductViewModel
+import com.h2o.store.ViewModels.User.ProfileViewModel
+import com.h2o.store.ViewModels.User.SignUpViewModel
 import com.h2o.store.data.models.AddressData
 import com.h2o.store.data.models.LocationData
 import com.h2o.store.data.remote.RetrofitClient
@@ -96,6 +103,23 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         factory = OrdersViewModel.Factory(currentUserId, orderRepository),
         viewModelStoreOwner = viewModelStoreOwner
     )
+    val adminViewModel: AdminViewModel = viewModel(
+        factory = AdminViewModel.Factory(
+            orderRepository,
+            userRepository,
+            Graph.productRepository
+        ),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+    // Initialize delivery view model for delivery personnel
+    val deliveryViewModel: DeliveryViewModel = viewModel(
+        factory = DeliveryViewModel.Factory(orderRepository),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+    // Create user-specific CartViewModel using the Factory
+    val cartViewModel: CartViewModel = viewModel(
+        factory = CartViewModel.Factory(currentUserId)
+    )
 
     val onHelpClick: () -> Unit = {
         // Open phone dialer with the help number
@@ -140,7 +164,14 @@ fun AppNavHost(navController: NavHostController, context: Context) {
 
             LoginScreen(
                 navController = navController,
-                onLoginSuccess = { navController.navigate(Screen.Home.route) },
+                onLoginSuccess = { role ->
+                    // Navigate based on user role
+                    when (role.lowercase()) {
+                        "admin" -> navController.navigate(Screen.AdminHome.route)
+                        "delivery" -> navController.navigate(Screen.DeliveryHome.route)
+                        else -> navController.navigate(Screen.Home.route)
+                    }
+                },
                 onNavigateToSignUp = { navController.navigate(Screen.SignUp.route) },
                 prefilledEmail = email
             )
@@ -208,7 +239,8 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 },
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
                 onHelpClick = onHelpClick,
-                onLogoutClick = onLogoutClick
+                onLogoutClick = onLogoutClick ,
+                cartViewModel = cartViewModel
             )
         }
 
@@ -278,6 +310,85 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 onBackClick = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        // Admin Home Screen
+        composable(Screen.AdminHome.route) {
+            AdminHomeScreen(
+                navController = navController,
+                adminViewModel = adminViewModel,
+                onManageProducts = {
+                    // This would navigate to a product management screen when implemented
+                },
+                onManageOrders = {
+                    navController.navigate(Screen.ManageOrders.route)
+                },
+                onManageUsers = {
+                    // This would navigate to a user management screen when implemented
+                },
+                onViewReports = {
+                    // This would navigate to a reporting screen when implemented
+                },
+                onLogoutClick = onLogoutClick
+            )
+        }
+
+// Manage Orders Screen
+        composable(Screen.ManageOrders.route) {
+            ManageOrdersScreen(
+                navController = navController,
+                viewModel = viewModel(
+                    factory = ManageOrdersViewModel.Factory(
+                        orderRepository = orderRepository
+                    )
+                ),
+                onOrderDetails = { orderId ->
+                    navController.navigate(Screen.AdminOrderDetails.createRoute(orderId))
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+// Admin Order Details Screen
+        composable(
+            route = Screen.AdminOrderDetails.route,
+            arguments = listOf(
+                navArgument("orderId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+
+            AdminOrderDetailsScreen(
+                navController = navController,
+                viewModel = viewModel(
+                    factory = ManageOrdersViewModel.Factory(
+                        orderRepository = orderRepository
+                    )
+                ),
+                orderId = orderId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Delivery Home Screen
+        composable(Screen.DeliveryHome.route) {
+            DeliveryHomeScreen(
+                navController = navController,
+                viewModel = deliveryViewModel,
+                onOrderSelected = { orderId ->
+                    navController.navigate(Screen.OrderDetails.createRoute(orderId))
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
+                onLogoutClick = onLogoutClick
             )
         }
     }

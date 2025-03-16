@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.h2o.store.data.Cart.CartDatabase
 import com.h2o.store.data.Cart.CartRepository
-import com.h2o.store.repositories.OrderRepository
+import com.h2o.store.repositories.Admin.OrderRepository
 import com.h2o.store.repositories.ProductRepository
 
 object Graph {

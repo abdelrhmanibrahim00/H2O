@@ -25,17 +25,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.h2o.store.Models.LoginState
-import com.h2o.store.Models.LoginViewModel
+import com.h2o.store.ViewModels.User.LoginState
+import com.h2o.store.ViewModels.User.LoginViewModel
 import com.h2o.store.repositories.AuthRepository
 
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (String) -> Unit, // Modified to take role as parameter
     onNavigateToSignUp: () -> Unit,
-    prefilledEmail: String? = null, // New parameter to receive email
+    prefilledEmail: String? = null,
     loginViewModel: LoginViewModel = viewModel(factory = LoginViewModel.Factory(AuthRepository()))
 ) {
     val context = LocalContext.current
@@ -90,7 +90,6 @@ fun LoginScreen(
         Button(
             onClick = {
                 loginViewModel.login()
-                //onLoginSuccess()
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -109,11 +108,15 @@ fun LoginScreen(
             is LoginState.Idle -> { /* Do nothing */ }
             is LoginState.Loading -> CircularProgressIndicator()
             is LoginState.Success -> {
-                LaunchedEffect(Unit) {
-                    Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
-                    onLoginSuccess()
+                val role = (loginState as LoginState.Success).role
+                LaunchedEffect(role) {
+                    Toast.makeText(
+                        context,
+                        "Login Successful as ${role.capitalize()}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onLoginSuccess(role)
                 }
-                onLoginSuccess()
             }
             is LoginState.Error -> {
                 Text(

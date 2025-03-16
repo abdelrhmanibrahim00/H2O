@@ -1,10 +1,10 @@
-package com.h2o.store.Models
+package com.h2o.store.ViewModels.User
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.h2o.store.data.Cart.CartItem
-import com.h2o.store.data.models.AddressData
+import com.h2o.store.data.User.UserData
 import com.h2o.store.repositories.CheckoutRepository
 import com.h2o.store.repositories.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,29 +27,29 @@ class CheckoutViewModel(private val userId: String) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // User address state
-    private val _userAddress = MutableStateFlow<AddressData?>(null)
-    val userAddress: StateFlow<AddressData?> = _userAddress
+    // User data state (includes address, name, email, phone, whatsapp)
+    private val _userData = MutableStateFlow<UserData?>(null)
+    val userData: StateFlow<UserData?> = _userData
 
-    // Address loading state
-    private val _isAddressLoading = MutableStateFlow(true)
-    val isAddressLoading: StateFlow<Boolean> = _isAddressLoading
+    // User data loading state
+    private val _isUserDataLoading = MutableStateFlow(true)
+    val isUserDataLoading: StateFlow<Boolean> = _isUserDataLoading
 
     init {
-        // Fetch user address when ViewModel is created
-        fetchUserAddress()
+        // Fetch user data when ViewModel is created
+        fetchUserData()
     }
 
-    private fun fetchUserAddress() {
+    private fun fetchUserData() {
         viewModelScope.launch {
-            _isAddressLoading.value = true
+            _isUserDataLoading.value = true
             try {
-                val address = userRepository.getUserAddress(userId)
-                _userAddress.value = address
+                val data = userRepository.getUserData(userId)
+                _userData.value = data
             } catch (e: Exception) {
-                _error.value = "Failed to load address: ${e.message}"
+                _error.value = "Failed to load user data: ${e.message}"
             } finally {
-                _isAddressLoading.value = false
+                _isUserDataLoading.value = false
             }
         }
     }
@@ -61,7 +61,13 @@ class CheckoutViewModel(private val userId: String) : ViewModel() {
     ) {
         if (cartItems.isEmpty()) return
 
-        val address = _userAddress.value
+        val userData = _userData.value
+        if (userData == null) {
+            _error.value = "User data not available"
+            return
+        }
+
+        val address = userData.address
         if (address == null) {
             _error.value = "No address available for delivery"
             return
@@ -78,7 +84,10 @@ class CheckoutViewModel(private val userId: String) : ViewModel() {
                     cartItems = cartItems,
                     subtotal = totalAmount,
                     paymentMethod = paymentMethod,
-                    address = address
+                    address = address,
+                    userName = userData.name,
+                    userPhone = userData.phone,
+                    userEmail = userData.email
                 )
 
                 if (success) {

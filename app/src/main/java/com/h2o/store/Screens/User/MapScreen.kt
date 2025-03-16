@@ -1,4 +1,4 @@
-package com.h2o.store.Screens
+package com.h2o.store.Screens.User
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -56,7 +56,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.h2o.store.Models.Location.LocationViewModel
+import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.data.models.AddressData
 import com.h2o.store.data.models.LocationData
 import com.h2o.store.data.models.PlacePrediction

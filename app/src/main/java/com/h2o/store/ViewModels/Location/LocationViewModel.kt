@@ -1,4 +1,4 @@
-package com.h2o.store.Models.Location
+package com.h2o.store.ViewModels.Location
 
 import android.util.Log
 import androidx.compose.runtime.State

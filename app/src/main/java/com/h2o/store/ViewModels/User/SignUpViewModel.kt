@@ -1,4 +1,4 @@
-package com.h2o.store.Models
+package com.h2o.store.ViewModels.User
 
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
@@ -111,7 +111,8 @@ class SignUpViewModel(private val authRepository: AuthRepository) : ViewModel() 
             return
         }
         if (!isValidPassword(_password.value)) {
-            _signUpState.value = SignUpState.Error("Password must be at least 6 characters and contain a letter and a number.")
+            _signUpState.value =
+                SignUpState.Error("Password must be at least 6 characters and contain a letter and a number.")
             return
         }
         if (_district.value.isEmpty()) {
@@ -119,7 +120,8 @@ class SignUpViewModel(private val authRepository: AuthRepository) : ViewModel() 
             return
         }
         if (_locationData.value == null || _addressData.value == null) {
-            _signUpState.value = SignUpState.Error("Please select a valid address before proceeding.")
+            _signUpState.value =
+                SignUpState.Error("Please select a valid address before proceeding.")
             return
         }
 
