@@ -17,17 +17,9 @@ interface CartDao {
     @Query("SELECT * FROM cart_items")
     fun getAllCartItems(): Flow<List<CartItem>>
 
-    // New method to get user-specific cart items
-    @Query("SELECT * FROM cart_items WHERE user_id = :userId")
-    fun getUserCartItems(userId: String): Flow<List<CartItem>>
-
     // Original method for backward compatibility
     @Query("SELECT * FROM cart_items WHERE productId = :productId")
     fun getCartItemById(productId: String): Flow<CartItem?>
-
-    // New method for user-specific product lookup
-    @Query("SELECT * FROM cart_items WHERE productId = :productId AND user_id = :userId")
-    fun getUserCartItemById(productId: String, userId: String): Flow<CartItem?>
 
     @Update
     suspend fun updateCartItem(cartItem: CartItem)
@@ -39,7 +31,15 @@ interface CartDao {
     @Query("DELETE FROM cart_items")
     suspend fun clearCart()
 
+    // New method to get user-specific cart items
+    @Query("SELECT * FROM cart_items WHERE userId = :userId") // Changed from user_id to userId
+    fun getUserCartItems(userId: String): Flow<List<CartItem>>
+
+    // New method for user-specific product lookup
+    @Query("SELECT * FROM cart_items WHERE productId = :productId AND userId = :userId") // Changed from user_id to userId
+    fun getUserCartItemById(productId: String, userId: String): Flow<CartItem?>
+
     // New method for clearing user-specific cart
-    @Query("DELETE FROM cart_items WHERE user_id = :userId")
+    @Query("DELETE FROM cart_items WHERE userId = :userId") // Changed from user_id to userId
     suspend fun clearUserCart(userId: String)
 }

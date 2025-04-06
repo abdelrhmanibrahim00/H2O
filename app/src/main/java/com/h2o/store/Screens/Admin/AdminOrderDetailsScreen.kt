@@ -18,8 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
@@ -28,8 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,7 +66,6 @@ fun AdminOrderDetailsScreen(
     var order by remember { mutableStateOf<Order?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showStatusDialog by remember { mutableStateOf(false) }
 
     // Format currency
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
@@ -96,29 +93,6 @@ fun AdminOrderDetailsScreen(
                 order = updatedOrder
             }
         }
-    }
-
-    if (showStatusDialog) {
-        AlertDialog(
-            onDismissRequest = { showStatusDialog = false },
-            title = { Text("Change Order Status") },
-            text = { Text("Do you want to change this order's status to Processing?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        statusChangeResult.value = viewModel.updateOrderToProcessing(orderId)
-                        showStatusDialog = false
-                    }
-                ) {
-                    Text("Yes")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showStatusDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 
     Scaffold(
@@ -161,29 +135,66 @@ fun AdminOrderDetailsScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    // Order ID and Status
                     item {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.Top // Changed to top alignment
                         ) {
-                            Column {
+                            // Order ID and dates information
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Text(
                                     text = "Order #${order?.orderId?.take(8)}",
                                     style = MaterialTheme.typography.headlineSmall
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Placed on ${formatDate(order?.orderDate)}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
+
+                                // Add estimated delivery time
+                                order?.estimatedDelivery?.let { estimatedDate ->
+                                    Text(
+                                        text = "Estimated delivery: ${formatDate(estimatedDate)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
-                            StatusChip(status = order?.status ?: "Unknown")
+                            // Status chip with improved visibility
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = when(order?.status) {
+                                    "Processing" -> MaterialTheme.colorScheme.primaryContainer
+                                    "Delivered" -> MaterialTheme.colorScheme.tertiaryContainer
+                                    "Cancelled" -> MaterialTheme.colorScheme.errorContainer
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text(
+                                    text = order?.status ?: "Unknown",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = when(order?.status) {
+                                        "Processing" -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        "Delivered" -> MaterialTheme.colorScheme.onTertiaryContainer
+                                        "Cancelled" -> MaterialTheme.colorScheme.onErrorContainer
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                         Divider(modifier = Modifier.padding(vertical = 16.dp))
                     }
 
                     // Customer Information (if available)
+                    // Customer Information - Update this section
                     item {
                         Text(
                             text = "Customer Information",
@@ -192,7 +203,16 @@ fun AdminOrderDetailsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // If you have customer info in the order, display it here
+                        // Show customer name if available (you'll need to fetch this)
+                        order?.customerName?.let { name ->
+                            Text(
+                                text = "Name: $name",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+
+                        // User ID
                         Text(
                             text = "User ID: ${order?.userId}",
                             style = MaterialTheme.typography.bodyMedium
@@ -211,6 +231,20 @@ fun AdminOrderDetailsScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
+
+                        // Add Delivery Personnel information
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Delivery Personnel:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        val deliveryPersonName = order?.deliveryPersonName
+                        Text(
+                            text = if (!deliveryPersonName.isNullOrEmpty()) deliveryPersonName else "Not selected",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
                         Divider(modifier = Modifier.padding(vertical = 16.dp))
                     }
@@ -309,18 +343,6 @@ fun AdminOrderDetailsScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                     }
 
-                    // Change status button (only show for Pending orders)
-                    if (order?.status == "Pending") {
-                        item {
-                            Button(
-                                onClick = { showStatusDialog = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Change Status to Processing")
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
                 }
             }
         }

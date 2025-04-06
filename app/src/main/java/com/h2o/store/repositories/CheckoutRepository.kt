@@ -34,10 +34,23 @@ class CheckoutRepository {
             val orderItems = cartItems.map { cartItem ->
                 OrderItem(
                     productId = cartItem.productId,
-                    productName = cartItem.productName,
-                    productImage = cartItem.productImage,
+                    productName = cartItem.name,
+                    productDescription = cartItem.description,
+                    productImage = cartItem.imageUrl,
                     quantity = cartItem.quantity,
-                    price = (if (cartItem.priceAfterDiscount > 0) cartItem.priceAfterDiscount else cartItem.productPrice).toDouble()
+                    price = if (cartItem.onSale) {
+                        cartItem.price * (1 - cartItem.discountPercentage / 100)
+                    } else {
+                        cartItem.price
+                    },
+                    originalPrice = cartItem.price,
+                    discountPercentage = cartItem.discountPercentage,
+                    category = cartItem.category,
+                    stock = cartItem.stock,
+                    brand = cartItem.brand,
+                    onSale = cartItem.onSale,
+                    featured = cartItem.featured,
+                    rating = cartItem.rating
                 )
             }
 

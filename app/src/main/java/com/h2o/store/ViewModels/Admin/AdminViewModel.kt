@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
 
 class AdminViewModel(
     private val orderRepository: OrderRepository,
@@ -29,9 +31,100 @@ class AdminViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
+    // Added for period filtering
+    private val _selectedPeriod = MutableStateFlow("week")
+    val selectedPeriod: StateFlow<String> = _selectedPeriod
+
+    // Custom date range
+    private val _startDate = MutableStateFlow<Date?>(null)
+    val startDate: StateFlow<Date?> = _startDate
+
+    private val _endDate = MutableStateFlow<Date?>(null)
+    val endDate: StateFlow<Date?> = _endDate
+
     private val TAG = "AdminViewModel"
 
-    // Fetch all orders regardless of userId
+    init {
+        // Set default to current week and immediately load data
+        setDefaultWeekPeriod()
+        fetchOrdersByDateRange(_startDate.value!!, _endDate.value!!)
+    }
+
+    // Set period to current week
+    private fun setDefaultWeekPeriod() {
+        val calendar = Calendar.getInstance()
+        val endDate = calendar.time
+
+        // Go back 7 days for the start date
+        calendar.add(Calendar.DAY_OF_YEAR, -7)
+        val startDate = calendar.time
+
+        _startDate.value = startDate
+        _endDate.value = endDate
+        _selectedPeriod.value = "week"
+    }
+
+    // Set period to current month
+    fun setMonthPeriod() {
+        val calendar = Calendar.getInstance()
+        val endDate = calendar.time
+
+        // Set to first day of current month
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        val startDate = calendar.time
+
+        _startDate.value = startDate
+        _endDate.value = endDate
+        _selectedPeriod.value = "month"
+
+        // Fetch orders with the new date range
+        fetchOrdersByDateRange(startDate, endDate)
+    }
+
+    // Set period to current week
+    fun setWeekPeriod() {
+        setDefaultWeekPeriod()
+
+        // Fetch orders with the new date range
+        fetchOrdersByDateRange(_startDate.value!!, _endDate.value!!)
+    }
+
+    // Set custom period
+    fun setCustomPeriod(start: Date, end: Date) {
+        _startDate.value = start
+        _endDate.value = end
+        _selectedPeriod.value = "custom"
+
+        // Fetch orders with the new date range
+        fetchOrdersByDateRange(start, end)
+    }
+
+    // Fetch orders by date range
+    fun fetchOrdersByDateRange(startDate: Date, endDate: Date) {
+        _isLoading.value = true
+        _errorMessage.value = null
+
+        viewModelScope.launch {
+            try {
+                orderRepository.getOrdersByDateRangeFlow(startDate, endDate)
+                    .catch { e ->
+                        Log.e(TAG, "Error fetching orders by date range: ${e.message}")
+                        _errorMessage.value = "Failed to load orders: ${e.message}"
+                        _isLoading.value = false
+                    }
+                    .collectLatest { orders ->
+                        _orders.value = orders
+                        _isLoading.value = false
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in fetchOrdersByDateRange: ${e.message}")
+                _errorMessage.value = "Failed to load orders: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Fetch all orders regardless of userId (keep for backward compatibility)
     fun fetchAllOrders() {
         _isLoading.value = true
         _errorMessage.value = null

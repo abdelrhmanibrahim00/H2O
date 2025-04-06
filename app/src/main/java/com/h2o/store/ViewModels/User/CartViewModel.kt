@@ -42,11 +42,9 @@ class CartViewModel(
 
     private fun calculateTotal() {
         _totalPrice.value = _cartItems.value.sumOf {
-            if (it.priceAfterDiscount > 0) it.priceAfterDiscount * it.quantity
-            else it.productPrice * it.quantity
+            (it.price * it.quantity).toInt()
         }
     }
-
     fun addToCart(product: Product) {
         viewModelScope.launch {
             val existingItemFlow = if (userId.isNotEmpty()) {
@@ -62,12 +60,19 @@ class CartViewModel(
             } else {
                 val cartItem = CartItem(
                     productId = product.id,
-                    quantity = 1,
-                    productName = product.name,
-                    productPrice = product.price.toInt(),
-                    priceAfterDiscount = 9,
-                    productImage = product.Image,
-                    userId = userId  // Set the user ID for new cart items
+                    userId = userId,
+                    name = product.name,
+                    description = product.description,
+                    price = product.price,
+                    discountPercentage = product.discountPercentage,
+                    imageUrl = product.imageUrl,
+                    category = product.category,
+                    stock = product.stock,
+                    brand = product.brand,
+                    onSale = product.onSale,
+                    featured = product.featured,
+                    rating = product.rating,
+                    quantity = 1
                 )
                 cartRepository.addToCart(cartItem)
             }

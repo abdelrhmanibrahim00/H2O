@@ -71,9 +71,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.h2o.store.Navigation.Screen
 import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.ViewModels.User.ProductViewModel
-import com.h2o.store.Navigation.Screen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -376,7 +376,7 @@ private fun MainContent(cartViewModel: CartViewModel,
                                 // Image
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
-                                        .data(product.Image)
+                                        .data(product.imageUrl)
                                         .crossfade(true)
                                         .build(),
                                     contentDescription = product.name,
@@ -407,9 +407,9 @@ private fun MainContent(cartViewModel: CartViewModel,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        if (product.discount) {
+                                        if (product.onSale) {
                                             Text(
-                                                text = "${product.price_after_discount} EGP",
+                                                text = "${(product.price-(product.price*product.discountPercentage/100))} EGP",
                                                 style = MaterialTheme.typography.body1,
                                                 color = MaterialTheme.colors.primary
                                             )

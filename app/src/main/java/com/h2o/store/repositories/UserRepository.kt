@@ -138,6 +138,55 @@ class UserRepository {
             listenerRegistration.remove()
         }
     }
+    // Add this method to UserRepository.kt
+    fun getDeliveryPersonnelFlow(): Flow<List<UserData>> = callbackFlow {
+        Log.d(TAG, "Starting real-time listener for delivery personnel")
+
+        // Query users with Role = delivery
+        val query = usersCollection
+            .whereEqualTo("Role", "delivery")
+            .orderBy("name", Query.Direction.ASCENDING)
+
+        val listenerRegistration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e(TAG, "Error listening for delivery personnel: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
+                try {
+                    val deliveryPersonnel = snapshot.documents.mapNotNull { document ->
+                        try {
+                            val userId = document.id
+                            val name = document.getString("name") ?: ""
+                            // You can add other fields if needed
+
+                            UserData(
+                                id = userId,
+                                name = name,
+                                email = document.getString("email") ?: "",
+                                phone = document.getString("phone") ?: "",
+                                role = "delivery"
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error converting document ${document.id}: ${e.message}")
+                            null
+                        }
+                    }
+
+                    Log.d(TAG, "Real-time update: ${deliveryPersonnel.size} delivery personnel")
+                    trySend(deliveryPersonnel)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing snapshot: ${e.message}")
+                }
+            }
+        }
+
+        awaitClose {
+            Log.d(TAG, "Removing delivery personnel listener")
+            listenerRegistration.remove()
+        }
+    }
 
     // Update user information
     suspend fun updateUser(userData: UserData): Boolean {

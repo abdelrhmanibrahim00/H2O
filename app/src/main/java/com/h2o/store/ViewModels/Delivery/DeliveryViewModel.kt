@@ -1,4 +1,4 @@
-package com.h2o.store.ViewModels.User
+package com.h2o.store.ViewModels.Delivery
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -13,7 +13,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class DeliveryViewModel(
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val userId: String // Add userId parameter
 ) : ViewModel() {
 
     private val _allOrders = MutableStateFlow<List<Order>>(emptyList())
@@ -27,7 +28,45 @@ class DeliveryViewModel(
 
     private val TAG = "DeliveryViewModel"
 
-    // Get all delivery orders
+    init {
+        // Fetch orders for this delivery person on initialization
+        fetchOrdersForDeliveryPerson()
+    }
+
+    // New function to fetch orders for the specific delivery person (regardless of status)
+    fun fetchOrdersForDeliveryPerson() {
+        _isLoading.value = true
+        _errorMessage.value = null
+
+        viewModelScope.launch {
+            try {
+                // Fetch all orders
+                orderRepository.getAllOrdersFlow()
+                    .catch { e ->
+                        Log.e(TAG, "Error fetching orders: ${e.message}")
+                        _errorMessage.value = "Failed to load orders: ${e.message}"
+                        _isLoading.value = false
+                    }
+                    .collectLatest { allOrders ->
+                        // Filter orders where deliveryPersonId matches this user's ID
+                        val myOrders = allOrders.filter { order ->
+                            order.deliveryPersonId == userId
+                        }
+
+                        _allOrders.value = myOrders
+                        _isLoading.value = false
+
+                        Log.d(TAG, "Fetched ${myOrders.size} orders for delivery person $userId")
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in fetchOrdersForDeliveryPerson: ${e.message}")
+                _errorMessage.value = "Failed to load orders: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Get all delivery orders (now unused for regular delivery personnel, but kept for admin use)
     fun fetchAllDeliveryOrders() {
         _isLoading.value = true
         _errorMessage.value = null
@@ -52,14 +91,15 @@ class DeliveryViewModel(
         }
     }
 
-    // Get orders by status
+    // Get orders by status for this delivery person
     fun fetchOrdersByStatus(status: String) {
         _isLoading.value = true
         _errorMessage.value = null
 
         viewModelScope.launch {
             try {
-                orderRepository.getOrdersByStatusFlow(status)
+                // Use the optimized query that filters by both delivery person and status
+                orderRepository.getOrdersByDeliveryPersonAndStatusFlow(userId, status)
                     .catch { e ->
                         Log.e(TAG, "Error fetching orders by status: ${e.message}")
                         _errorMessage.value = "Failed to load orders: ${e.message}"
@@ -102,11 +142,14 @@ class DeliveryViewModel(
     }
 
     // Factory for creating this ViewModel with dependencies
-    class Factory(private val orderRepository: OrderRepository) : ViewModelProvider.Factory {
+    class Factory(
+        private val orderRepository: OrderRepository,
+        private val userId: String
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(DeliveryViewModel::class.java)) {
-                return DeliveryViewModel(orderRepository) as T
+                return DeliveryViewModel(orderRepository, userId) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -87,14 +87,16 @@ class ProductRepository {
                 "name" to product.name,
                 "description" to product.description,
                 "price" to product.price,
-//                "discountPercentage" to product.discountPercentage,
-//                "imageUrl" to product.imageUrl,
-//                "category" to product.category,
-//                "stock" to product.stock,
-//                "brand" to product.brand,
-//                "onSale" to product.onSale,
-//                "featured" to product.featured,
-//                "rating" to product.rating
+                "discountPercentage" to product.discountPercentage,
+                "imageUrl" to product.imageUrl,
+                "category" to product.category,
+                "stock" to product.stock,
+                "brand" to product.brand,
+                "onSale" to product.onSale,
+                "featured" to product.featured,
+                "rating" to product.rating,
+                "quantity" to product.quantity
+
             )
 
             // Perform the update
@@ -122,14 +124,15 @@ class ProductRepository {
                 "name" to product.name,
                 "description" to product.description,
                 "price" to product.price,
-//                "discountPercentage" to product.discountPercentage,
-//                "imageUrl" to product.imageUrl,
-//                "category" to product.category,
-//                "stock" to product.stock,
-//                "brand" to product.brand,
-//                "onSale" to product.onSale,
-//                "featured" to product.featured,
-//                "rating" to product.rating
+                "discountPercentage" to product.discountPercentage,
+                "imageUrl" to product.imageUrl,
+                "category" to product.category,
+                "stock" to product.stock,
+                "brand" to product.brand,
+                "onSale" to product.onSale,
+                "featured" to product.featured,
+                "rating" to product.rating,
+                "quantity" to product.quantity
             )
 
             // Add the product and get the new document ID

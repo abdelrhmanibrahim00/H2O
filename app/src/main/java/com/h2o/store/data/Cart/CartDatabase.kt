@@ -10,28 +10,36 @@ abstract class CartDatabase : RoomDatabase() {
     abstract fun cartDao(): CartDao
 
     companion object {
-        // Migration from version 2 to 3 (int to double)
+        // Migration from version 2 to 3
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Create a new table with the updated schema
+                // Create a new table with the updated schema - without the extra fields
                 database.execSQL(
                     "CREATE TABLE cart_items_new (" +
                             "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                             "productId TEXT NOT NULL, " +
-                            "quantity INTEGER NOT NULL, " +
-                            "productName TEXT NOT NULL, " +
-                            "productPrice REAL NOT NULL, " + // Changed from INTEGER to REAL
-                            "price_after_discount REAL NOT NULL, " + // Changed from INTEGER to REAL
-                            "productImage TEXT NOT NULL, " +
-                            "user_id TEXT NOT NULL DEFAULT '')"
+                            "userId TEXT NOT NULL DEFAULT '', " +
+                            "name TEXT NOT NULL DEFAULT '', " +
+                            "description TEXT NOT NULL DEFAULT '', " +
+                            "price REAL NOT NULL DEFAULT 0, " +
+                            "discountPercentage REAL NOT NULL DEFAULT 0, " +
+                            "imageUrl TEXT NOT NULL DEFAULT '', " +
+                            "category TEXT NOT NULL DEFAULT '', " +
+                            "stock INTEGER NOT NULL DEFAULT 0, " +
+                            "brand TEXT NOT NULL DEFAULT '', " +
+                            "onSale INTEGER NOT NULL DEFAULT 0, " +
+                            "featured INTEGER NOT NULL DEFAULT 0, " +
+                            "rating REAL NOT NULL DEFAULT 0, " +
+                            "quantity INTEGER NOT NULL DEFAULT 0)"
                 )
-
-                // Delete all the old data - as requested
+                // Create an index for product ID and user ID
+                database.execSQL(
+                    "CREATE UNIQUE INDEX index_cart_items_productId_userId ON cart_items_new(productId, userId)"
+                )
+                // Delete all old data as requested
                 database.execSQL("DELETE FROM cart_items")
-
                 // Drop the old table
                 database.execSQL("DROP TABLE cart_items")
-
                 // Rename the new table to match the old one
                 database.execSQL("ALTER TABLE cart_items_new RENAME TO cart_items")
             }

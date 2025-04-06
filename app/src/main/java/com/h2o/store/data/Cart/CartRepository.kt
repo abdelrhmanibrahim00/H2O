@@ -24,4 +24,5 @@ class CartRepository(private val cartDao: CartDao) {
 
     // New method for clearing user-specific cart
     suspend fun clearUserCart(userId: String) = cartDao.clearUserCart(userId)
+
 }

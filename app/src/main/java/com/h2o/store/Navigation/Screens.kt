@@ -72,8 +72,12 @@ sealed class Screen(val title: String = "", val route: String) {
             return "edit_product_screen/$productId"
         }
     }
+    object AddProduct : Screen(route="add_product_screen")
 
-
+    // Add the OrderDeliveryScreen here
+    object OrderDelivery : Screen(title = "Delivery Details", route = "orderDelivery/{orderId}") {
+        fun createRoute(orderId: String) = "orderDelivery/$orderId"
+    }
 
 
 

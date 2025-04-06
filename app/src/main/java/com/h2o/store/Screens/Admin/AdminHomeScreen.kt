@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Inventory
@@ -36,6 +38,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.h2o.store.ViewModels.Admin.AdminViewModel
+import com.h2o.store.components.DateRangeDisplay
+import com.h2o.store.components.PeriodFilterButtons
+import com.h2o.store.components.rememberDateRangePickerManager
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -44,6 +49,7 @@ data class AdminDashboardItem(
     val icon: ImageVector,
     val onClick: () -> Unit
 )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminHomeScreen(
@@ -59,10 +65,24 @@ fun AdminHomeScreen(
     val orders by adminViewModel.orders.collectAsState()
     val isLoading by adminViewModel.isLoading.collectAsState()
     val errorMessage by adminViewModel.errorMessage.collectAsState()
+    val selectedPeriod by adminViewModel.selectedPeriod.collectAsState()
+    val startDate by adminViewModel.startDate.collectAsState()
+    val endDate by adminViewModel.endDate.collectAsState()
+
+    // Date picker manager
+    val dateRangePickerManager = rememberDateRangePickerManager()
 
     // Effect to fetch data when the screen is shown
+    // Effect to fetch data only if needed (if no data is present)
     LaunchedEffect(key1 = true) {
-        adminViewModel.fetchAllOrders()
+        if (orders.isEmpty() && !isLoading) {
+            // If we already set dates in the ViewModel init but haven't loaded data yet
+            if (startDate != null && endDate != null) {
+                adminViewModel.fetchOrdersByDateRange(startDate!!, endDate!!)
+            } else {
+                adminViewModel.fetchAllOrders()
+            }
+        }
     }
 
     // Calculate metrics
@@ -100,15 +120,39 @@ fun AdminHomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     "Welcome, Admin",
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+
+                // Period Filter Buttons
+                PeriodFilterButtons(
+                    selectedPeriod = selectedPeriod,
+                    onWeekSelected = { adminViewModel.setWeekPeriod() },
+                    onMonthSelected = { adminViewModel.setMonthPeriod() },
+                    onCustomPeriodSelected = {
+                        // Show start date picker first
+                        dateRangePickerManager.showStartDatePicker(startDate) { newStartDate ->
+                            // Then show end date picker
+                            dateRangePickerManager.showEndDatePicker(
+                                startDate = newStartDate,
+                                initialDate = endDate
+                            ) { newEndDate ->
+                                // Set custom period with selected dates
+                                adminViewModel.setCustomPeriod(newStartDate, newEndDate)
+                            }
+                        }
+                    }
+                )
+
+                // Display selected date range
+                DateRangeDisplay(startDate, endDate)
 
                 // Display error message if any
                 errorMessage?.let { error ->

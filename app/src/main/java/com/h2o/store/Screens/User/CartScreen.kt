@@ -58,9 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.AsyncImage
-import com.google.firebase.auth.FirebaseAuth
-import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.Navigation.Screen
+import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.data.Cart.CartItem
 import kotlinx.coroutines.launch
 
@@ -77,9 +76,6 @@ fun CartScreenWrapper(
     onLogoutClick: () -> Unit ,
     cartViewModel: CartViewModel
 ) {
-    // Get current user ID from Firebase Auth
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    val userId = currentUser?.uid ?: ""
 
     // Use the existing CartScreen composable with the user-specific ViewModel
     CartScreen(
@@ -311,8 +307,8 @@ private fun CartItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = cartItem.productImage,
-                contentDescription = cartItem.productName,
+                model = cartItem.imageUrl,
+                contentDescription = cartItem.name,
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(4.dp)),
@@ -325,11 +321,11 @@ private fun CartItemCard(
                     .padding(horizontal = 8.dp)
             ) {
                 Text(
-                    text = cartItem.productName,
+                    text = cartItem.name,
                     style = MaterialTheme.typography.subtitle1
                 )
                 Text(
-                    text = "${if (cartItem.priceAfterDiscount > 0) cartItem.priceAfterDiscount else cartItem.productPrice} EGP",
+                    text = "${cartItem.price} EGP",
                     style = MaterialTheme.typography.body2
                 )
             }

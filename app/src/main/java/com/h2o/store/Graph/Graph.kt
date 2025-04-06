@@ -18,16 +18,16 @@ object Graph {
     val productRepository by lazy {
         ProductRepository()  // Initialize with Firestore
     }
+
     // Add order repository with lazy initialization
     val orderRepository by lazy {
         OrderRepository()  // Initialize with Firestore
     }
+
     // Add user repository with lazy initialization
     val userRepository by lazy {
         UserRepository()  // Initialize with Firestore
     }
-
-
 
     fun provide(context: Context) {
         database = Room.databaseBuilder(
@@ -35,7 +35,7 @@ object Graph {
             CartDatabase::class.java,
             "cart.db"
         )
-            .fallbackToDestructiveMigration()  // This will delete and recreate the database on version change
+            .addMigrations(CartDatabase.MIGRATION_2_3) // Use plural "addMigrations"
             .build()
     }
 }

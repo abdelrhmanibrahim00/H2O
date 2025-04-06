@@ -480,8 +480,8 @@ private fun CheckoutItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = cartItem.productImage,
-                contentDescription = cartItem.productName,
+                model = cartItem.imageUrl,
+                contentDescription = cartItem.name,
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(4.dp)),
@@ -494,11 +494,11 @@ private fun CheckoutItemCard(
                     .padding(horizontal = 8.dp)
             ) {
                 Text(
-                    text = cartItem.productName,
+                    text = cartItem.name,
                     style = MaterialTheme.typography.subtitle1
                 )
                 Text(
-                    text = "${if (cartItem.priceAfterDiscount > 0) cartItem.priceAfterDiscount else cartItem.productPrice} EGP",
+                    text = "${cartItem.price} EGP",
                     style = MaterialTheme.typography.body2
                 )
             }
@@ -511,11 +511,11 @@ private fun CheckoutItemCard(
                     style = MaterialTheme.typography.body2
                 )
                 Text(
-                    text = "${(if (cartItem.priceAfterDiscount > 0) cartItem.priceAfterDiscount else cartItem.productPrice) * cartItem.quantity} EGP",
+                    text = "${cartItem.price * cartItem.quantity} EGP",
                     style = MaterialTheme.typography.subtitle2,
                     fontWeight = FontWeight.Bold
                 )
             }
+            }
         }
     }
-}
