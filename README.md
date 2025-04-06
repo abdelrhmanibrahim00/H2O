@@ -1,6 +1,6 @@
 # H2O Store: Smart Inventory Management Solution
 
-> **Development Status**: This application is currently in early development (approximately 20% complete). User functionalities are mostly implemented, but admin and delivery personnel features are still under development.
+> **Development Status**: This application is currently in early development (approximately 60% complete). User functionalities are mostly implemented, but admin and delivery personnel features are still under development.
 
 ## Overview
 H2O Store is a modern Android application designed for small to medium-scale businesses that addresses critical inventory management challenges. Built with the latest Google technologies like Jetpack Compose, this application integrates advanced AI solutions to optimize inventory levels, preventing both overstocking and stockouts.
