@@ -21,13 +21,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.h2o.store.ViewModels.User.LoginState
 import com.h2o.store.ViewModels.User.LoginViewModel
 import com.h2o.store.repositories.AuthRepository
+import com.h2o.store.reusableComposable.PasswordTextField
 
 
 @Composable
@@ -77,12 +77,9 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { loginViewModel.onPasswordChanged(it) },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+        PasswordTextField(
+            password = password,
+            onPasswordChange = { loginViewModel.onPasswordChanged(it) }
         )
 
         Spacer(modifier = Modifier.height(24.dp))

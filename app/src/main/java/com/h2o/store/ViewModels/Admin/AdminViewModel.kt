@@ -8,6 +8,9 @@ import com.h2o.store.data.Orders.Order
 import com.h2o.store.repositories.Admin.OrderRepository
 import com.h2o.store.repositories.ProductRepository
 import com.h2o.store.repositories.ProfileRepository
+import com.h2o.store.utils.NotificationHelper
+import com.h2o.store.utils.NotificationPriority
+import com.h2o.store.utils.PrioritizedNotification
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -42,12 +45,101 @@ class AdminViewModel(
     private val _endDate = MutableStateFlow<Date?>(null)
     val endDate: StateFlow<Date?> = _endDate
 
+    // New properties for notifications
+    private val _newOrderNotifications = MutableStateFlow<List<Order>>(emptyList())
+    val newOrderNotifications: StateFlow<List<Order>> = _newOrderNotifications
+
+    private val _unreadNotificationsCount = MutableStateFlow(0)
+    val unreadNotificationsCount: StateFlow<Int> = _unreadNotificationsCount
+
+    private val _notificationLastRefreshed = MutableStateFlow<Date?>(null)
+    val notificationLastRefreshed: StateFlow<Date?> = _notificationLastRefreshed
+
+
+
+    // Added properties for prioritized notifications
+    private val _normalPriorityNotifications = MutableStateFlow<List<PrioritizedNotification>>(emptyList())
+    val normalPriorityNotifications: StateFlow<List<PrioritizedNotification>> = _normalPriorityNotifications
+
+    private val _urgentPriorityNotifications = MutableStateFlow<List<PrioritizedNotification>>(emptyList())
+    val urgentPriorityNotifications: StateFlow<List<PrioritizedNotification>> = _urgentPriorityNotifications
+
+    private val _hasUrgentNotifications = MutableStateFlow(false)
+    val hasUrgentNotifications: StateFlow<Boolean> = _hasUrgentNotifications
+
+    // Updated total notifications count
+    private val _totalNotificationsCount = MutableStateFlow(0)
+    val totalNotificationsCount: StateFlow<Int> = _totalNotificationsCount
+
     private val TAG = "AdminViewModel"
 
     init {
         // Set default to current week and immediately load data
         setDefaultWeekPeriod()
         fetchOrdersByDateRange(_startDate.value!!, _endDate.value!!)
+        // Start fetching notifications
+        fetchAndClassifyNotifications()
+    }
+
+    // Fetch and classify notifications
+
+    fun fetchAndClassifyNotifications() {
+        viewModelScope.launch {
+            try {
+                orderRepository.getRecentOrderUpdatesFlow()
+                    .catch { e ->
+                        Log.e(TAG, "Error fetching notifications: ${e.message}")
+                    }
+                    .collectLatest { orders ->
+                        // Process and classify notifications
+                        val allNotifications = orders.map { order ->
+                            NotificationHelper.classifyOrderNotification(order)
+                        }
+
+                        // Filter to only include notifications from the last week
+                        val recentNotifications = allNotifications.filter {
+                            NotificationHelper.isWithinLastWeek(it.order.orderDate)
+                        }
+
+                        // Split into normal and urgent notifications
+                        val normalNotifications = recentNotifications.filter {
+                            it.priority == NotificationPriority.NORMAL
+                        }
+
+                        val urgentNotifications = recentNotifications.filter {
+                            it.priority == NotificationPriority.URGENT
+                        }
+
+                        // Update state flows
+                        _normalPriorityNotifications.value = normalNotifications
+                        _urgentPriorityNotifications.value = urgentNotifications
+                        _hasUrgentNotifications.value = urgentNotifications.isNotEmpty()
+                        _totalNotificationsCount.value = normalNotifications.size + urgentNotifications.size
+
+                        // Update last refreshed timestamp
+                        _notificationLastRefreshed.value = Calendar.getInstance().time
+
+                        Log.d(TAG, "Notifications classified: ${normalNotifications.size} normal, ${urgentNotifications.size} urgent")
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in fetchAndClassifyNotifications: ${e.message}")
+            }
+        }
+    }
+
+    // Get all notifications sorted (urgent first, then normal)
+    fun getAllNotificationsSorted(): List<PrioritizedNotification> {
+        val urgent = _urgentPriorityNotifications.value
+        val normal = _normalPriorityNotifications.value
+
+        return urgent + normal
+    }
+
+    // Mark all notifications as read
+    fun markAllNotificationsAsRead() {
+        // Reset unread counts - in a real app, you might store read status
+        // in a local database or in Firestore
+        _totalNotificationsCount.value = 0
     }
 
     // Set period to current week
@@ -148,6 +240,33 @@ class AdminViewModel(
             }
         }
     }
+
+    // Fetch new order notifications
+    fun fetchNewOrderNotifications() {
+        viewModelScope.launch {
+            try {
+                orderRepository.getNewOrdersForNotificationsFlow()
+                    .catch { e ->
+                        Log.e(TAG, "Error fetching new order notifications: ${e.message}")
+                    }
+                    .collectLatest { newOrders ->
+                        _newOrderNotifications.value = newOrders
+                        updateUnreadNotificationsCount()
+                        _notificationLastRefreshed.value = Calendar.getInstance().time
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in fetchNewOrderNotifications: ${e.message}")
+            }
+        }
+    }
+
+    // Update the unread notifications count
+    private fun updateUnreadNotificationsCount() {
+        // Here we're simply counting all new orders as unread
+        // You could implement a more sophisticated system to track read/unread status
+        _unreadNotificationsCount.value = _newOrderNotifications.value.size
+    }
+
 
     // Fetch orders for a specific status
     fun fetchOrdersByStatus(status: String) {

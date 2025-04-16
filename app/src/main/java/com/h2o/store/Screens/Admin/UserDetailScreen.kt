@@ -131,7 +131,7 @@ fun UserDetailsScreen(
                                     text = user?.name ?: "No Name",
                                     style = MaterialTheme.typography.headlineSmall
                                 )
-                                RoleChip(role = user?.role ?: "user")
+                                RoleChip(role = user?.role ?: "")
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))

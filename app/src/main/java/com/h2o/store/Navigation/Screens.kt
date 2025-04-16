@@ -79,6 +79,8 @@ sealed class Screen(val title: String = "", val route: String) {
         fun createRoute(orderId: String) = "orderDelivery/$orderId"
     }
 
+    object InventoryAnalysis : Screen(route="inventory_analysis_screen")
+
 
 
     // Bottom Navigation Screens

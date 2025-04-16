@@ -15,6 +15,7 @@ class UserRepository {
     private val usersCollection = firestore.collection("users")
     private val TAG = "UserRepository"
 
+    // Fix for getUserData method in UserRepository
     suspend fun getUserData(userId: String): UserData {
         return try {
             Log.d(TAG, "Fetching user data for user ID: $userId")
@@ -32,6 +33,8 @@ class UserRepository {
             val whatsapp = documentSnapshot.getString("whatsapp")
             val city = documentSnapshot.getString("city") ?: ""
             val district = documentSnapshot.getString("district") ?: ""
+            // Add this line to extract the role
+            val role = documentSnapshot.getString("Role") ?: "user"
 
             // Extract address data
             val addressMap = documentSnapshot.get("address") as? Map<String, Any>
@@ -56,7 +59,8 @@ class UserRepository {
                 whatsapp = whatsapp,
                 address = address,
                 city = city,
-                district = district
+                district = district,
+                role = role  // Pass the role to the UserData constructor
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching user data: ${e.message}")

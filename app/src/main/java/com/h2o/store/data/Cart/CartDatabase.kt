@@ -11,7 +11,7 @@ abstract class CartDatabase : RoomDatabase() {
 
     companion object {
         // Migration from version 2 to 3
-        val MIGRATION_2_3 = object : Migration(2, 3) {
+        val MIGRATION_2_3 = object : Migration(1, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Create a new table with the updated schema - without the extra fields
                 database.execSQL(

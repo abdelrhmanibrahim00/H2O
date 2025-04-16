@@ -29,6 +29,7 @@ import com.h2o.store.Screens.Admin.ProductDetailsScreen
 import com.h2o.store.Screens.Admin.UserDetailsScreen
 import com.h2o.store.Screens.AdminHomeScreen
 import com.h2o.store.Screens.EditProfileScreen
+import com.h2o.store.Screens.InventoryAnalysisScreen
 import com.h2o.store.Screens.LoginScreen
 import com.h2o.store.Screens.OrderDeliveryScreen
 import com.h2o.store.Screens.ProfileScreen
@@ -46,6 +47,7 @@ import com.h2o.store.ViewModels.Admin.ManageOrdersViewModel
 import com.h2o.store.ViewModels.Admin.ManageProductsViewModel
 import com.h2o.store.ViewModels.Admin.ManageUsersViewModel
 import com.h2o.store.ViewModels.Delivery.DeliveryViewModel
+import com.h2o.store.ViewModels.InventoryAnalysisViewModel
 import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.ViewModels.User.OrdersViewModel
@@ -60,6 +62,7 @@ import com.h2o.store.domain.usecases.GetCoordinatesFromAddress
 import com.h2o.store.domain.usecases.GetPlacePredictions
 import com.h2o.store.repositories.Admin.OrderRepository
 import com.h2o.store.repositories.AuthRepository
+import com.h2o.store.repositories.InventoryPredictionRepository
 import com.h2o.store.repositories.LocationRepository
 import com.h2o.store.repositories.ProfileRepository
 
@@ -163,6 +166,13 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         }
     }
 
+    // Analytics ViewModel
+
+    val inventoryPredictionRepository = InventoryPredictionRepository()
+    val inventoryAnalysisViewModel: InventoryAnalysisViewModel = viewModel(
+        factory = InventoryAnalysisViewModel.Factory(inventoryPredictionRepository)
+    )
+
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
             SplashScreen(navController = navController) {
@@ -214,7 +224,8 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                     }
                 },
                 locationViewModel = locationViewModel,
-                viewModel = signUpViewModel
+                viewModel = signUpViewModel ,
+                onBackPressed = {navController.popBackStack()}
             )
         }
 
@@ -372,9 +383,15 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                     navController.navigate(Screen.ManageUsers.route)
                 },
                 onViewReports = {
+                    navController.navigate(Screen.InventoryAnalysis.route)
+
                     // This would navigate to a reporting screen when implemented
                 },
-                onLogoutClick = onLogoutClick
+                onLogoutClick = onLogoutClick,
+
+                onOrderSelected = { orderId ->
+                    navController.navigate(Screen.AdminOrderDetails.createRoute(orderId))
+                }
             )
         }
 
@@ -621,6 +638,16 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 navController = navController,
                 viewModel = deliveryViewModel,
                 orderId = orderId
+            )
+        }
+
+        // View analysis
+        composable(Screen.InventoryAnalysis.route) {
+
+
+            InventoryAnalysisScreen(
+                navController = navController,
+                viewModel = inventoryAnalysisViewModel
             )
         }
     }

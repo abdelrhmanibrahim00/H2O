@@ -567,9 +567,10 @@ class OrderRepository {
         }
     }
 
-    // Main pagination method to be used across all order queries
-    // Main pagination method to be used across all order queries
-    // Modify this method to handle the missing indexes
+
+    /**
+     * Enhanced paginated query with time limits and better error handling
+     */
     fun getPaginatedOrdersFlow(
         status: String? = null,
         userId: String? = null,
@@ -577,15 +578,42 @@ class OrderRepository {
         startDate: Date? = null,
         endDate: Date? = null,
         limit: Long = 20,
-        lastDocumentSnapshot: DocumentSnapshot? = null
+        lastDocumentSnapshot: DocumentSnapshot? = null,
+        monthsToLoad: Int = 6 // Default to last 6 months
     ): Flow<PaginatedResult<Order>> = callbackFlow {
-        Log.d(TAG, "Starting paginated query with parameters: status=$status, userId=$userId, limit=$limit")
+        Log.d(TAG, "Starting paginated query with time limit of $monthsToLoad months")
 
         try {
+            // Send loading state immediately
+            trySend(PaginatedResult(emptyList(), false, null, LoadState.LOADING))
+
+            // Calculate the default date threshold if not explicitly provided
+            val effectiveStartDate = if (startDate != null) {
+                startDate
+            } else {
+                val calendar = Calendar.getInstance()
+                calendar.add(Calendar.MONTH, -monthsToLoad)
+                calendar.time
+            }
+
             // Start with the base collection
             var baseQuery: Query = ordersCollection
 
-            // Apply filters conditionally
+            // Apply time filter (always apply this for performance)
+            baseQuery = baseQuery.whereGreaterThanOrEqualTo(
+                "orderDate",
+                Timestamp(effectiveStartDate)
+            )
+
+            // Apply end date filter if provided
+            if (endDate != null) {
+                baseQuery = baseQuery.whereLessThanOrEqualTo(
+                    "orderDate",
+                    Timestamp(endDate)
+                )
+            }
+
+            // Apply other filters conditionally
             if (status != null) {
                 baseQuery = baseQuery.whereEqualTo("status", status)
             }
@@ -626,13 +654,20 @@ class OrderRepository {
             // Get the last document for pagination
             val lastDocument = if (orders.isNotEmpty()) querySnapshot.documents.last() else null
 
-            Log.d(TAG, "Paginated query returned ${orders.size} orders")
+            Log.d(TAG, "Paginated query returned ${orders.size} orders within time limit")
 
             // Send the paginated result
             trySend(PaginatedResult(orders, hasMore, lastDocument, LoadState.DONE))
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching paginated orders: ${e.message}")
-            trySend(PaginatedResult(emptyList(), false, null, LoadState.ERROR))
+            // Check if error is network related and handle accordingly
+            val errorMessage = e.message ?: "Unknown error"
+            if (errorMessage.contains("network") || errorMessage.contains("host")) {
+                Log.w(TAG, "Network error in paginated query: $errorMessage")
+                trySend(PaginatedResult(emptyList(), false, null, LoadState.NETWORK_ERROR))
+            } else {
+                Log.e(TAG, "Error fetching paginated orders: $errorMessage")
+                trySend(PaginatedResult(emptyList(), false, null, LoadState.ERROR))
+            }
         }
 
         awaitClose { }
@@ -642,7 +677,7 @@ class OrderRepository {
 
     // Add LoadState enum to the repository
     enum class LoadState {
-        LOADING, DONE, ERROR
+        LOADING, DONE, ERROR , NETWORK_ERROR
     }
 
     // Enhanced PaginatedResult class
@@ -710,4 +745,173 @@ class OrderRepository {
 
         awaitClose { }
     }
+
+    /**
+     * Gets orders filtered by time, defaulting to the last 6 months.
+     * This method optimizes performance and cost by limiting data fetched.
+     */
+    fun getTimeFilteredOrdersFlow(
+        monthsToLoad: Int = 6,
+        status: String? = null,
+        userId: String? = null
+    ): Flow<List<Order>> = callbackFlow {
+        Log.d(TAG, "Starting real-time listener for orders from last $monthsToLoad months")
+
+        // Calculate the date threshold (e.g., 6 months ago)
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.MONTH, -monthsToLoad)
+        val dateThreshold = Timestamp(calendar.time)
+
+        // Start with base query limited by time
+        var query = ordersCollection
+            .whereGreaterThanOrEqualTo("orderDate", dateThreshold)
+            .orderBy("orderDate", Query.Direction.DESCENDING)
+
+        // Apply additional filters if provided
+        if (status != null) {
+            query = query.whereEqualTo("status", status)
+        }
+
+        if (userId != null) {
+            query = query.whereEqualTo("userId", userId)
+        }
+
+        // Set up the snapshot listener with better error handling
+        val listenerRegistration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                // Check if error is network related and handle accordingly
+                if (error.message?.contains("network") == true ||
+                    error.message?.contains("host") == true) {
+                    Log.w(TAG, "Network error in time-filtered orders: ${error.message}")
+                    // Don't fail the flow - just inform of network issue
+                    trySend(emptyList())
+                } else {
+                    Log.e(TAG, "Error listening for time-filtered order updates: ${error.message}")
+                    close(error)
+                }
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
+                try {
+                    val orders = snapshot.documents.mapNotNull { document ->
+                        try {
+                            document.toObject(Order::class.java)?.copy(orderId = document.id)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error converting document ${document.id}: ${e.message}")
+                            null
+                        }
+                    }
+
+                    Log.d(TAG, "Real-time update: ${orders.size} orders from last $monthsToLoad months")
+                    trySend(orders)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing snapshot: ${e.message}")
+                    close(e)
+                }
+            }
+        }
+
+        // Clean up the listener when the flow is cancelled
+        awaitClose {
+            Log.d(TAG, "Removing time-filtered orders listener")
+            listenerRegistration.remove()
+        }
+    }
+
+    // NEW METHOD: Get new orders for notifications (less than a week old)
+    fun getNewOrdersForNotificationsFlow(): Flow<List<Order>> = callbackFlow {
+        Log.d(TAG, "Starting real-time listener for new order notifications")
+
+        // Calculate the date threshold (7 days ago)
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -7)
+        val weekAgoTimestamp = Timestamp(calendar.time)
+
+        // Query orders created within the last week
+        val query = ordersCollection
+            .whereGreaterThanOrEqualTo("orderDate", weekAgoTimestamp)
+            .orderBy("orderDate", Query.Direction.DESCENDING)
+
+        // Set up the snapshot listener
+        val listenerRegistration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e(TAG, "Error listening for new order notifications: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
+                try {
+                    val orders = snapshot.documents.mapNotNull { document ->
+                        try {
+                            document.toObject(Order::class.java)?.copy(orderId = document.id)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error converting document ${document.id}: ${e.message}")
+                            null
+                        }
+                    }
+
+                    Log.d(TAG, "Real-time update: ${orders.size} new orders for notifications")
+                    trySend(orders)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing snapshot: ${e.message}")
+                }
+            }
+        }
+
+        // Clean up the listener when the flow is cancelled
+        awaitClose {
+            Log.d(TAG, "Removing new orders notifications listener")
+            listenerRegistration.remove()
+        }
+    }
+
+    // NEW METHOD: Get all recent order updates for notification system
+    fun getRecentOrderUpdatesFlow(): Flow<List<Order>> = callbackFlow {
+        Log.d(TAG, "Starting real-time listener for notification system")
+
+        // Calculate the date threshold (7 days ago)
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -7)
+        val weekAgoDate = calendar.time
+
+        // Start with a query for recent orders or updates
+        val query = ordersCollection
+            .whereGreaterThanOrEqualTo("orderDate", Timestamp(weekAgoDate))
+            .orderBy("orderDate", Query.Direction.DESCENDING)
+
+        // Set up the snapshot listener
+        val listenerRegistration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e(TAG, "Error listening for notification updates: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
+                try {
+                    val orders = snapshot.documents.mapNotNull { document ->
+                        try {
+                            document.toObject(Order::class.java)?.copy(orderId = document.id)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error converting document ${document.id}: ${e.message}")
+                            null
+                        }
+                    }
+
+                    Log.d(TAG, "Real-time update: ${orders.size} orders for notification system")
+                    trySend(orders)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing snapshot: ${e.message}")
+                }
+            }
+        }
+
+        // Clean up the listener when the flow is cancelled
+        awaitClose {
+            Log.d(TAG, "Removing notification system listener")
+            listenerRegistration.remove()
+        }
+    }
+
+
 }

@@ -34,6 +34,16 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}"/>
 
+        <!-- This meta-data tag explicitly declares which Google Play Services modules
+     the app depends on. It helps optimize the loading of these components
+     by signaling to the system exactly which parts are needed, potentially
+     reducing initialization time and memory usage. Add this if you experience
+     Google Play Services initialization issues or "Unknown calling package"
+     errors. Values: places,maps,location -->
+        <meta-data
+            android:name="com.google.android.gms.googleplayservices.DEPENDENCIES"
+            android:value="places,maps,location" />
+
         <!-- Google Play Services Metadata -->
         <meta-data
             android:name="com.google.android.gms.version"

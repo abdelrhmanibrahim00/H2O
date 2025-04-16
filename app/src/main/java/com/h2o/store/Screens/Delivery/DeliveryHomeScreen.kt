@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.h2o.store.ViewModels.Delivery.DeliveryViewModel
+import com.h2o.store.components.LogoutButton
 import com.h2o.store.data.Orders.Order
 import com.h2o.store.data.models.AddressData
 import java.text.SimpleDateFormat
@@ -78,7 +79,7 @@ fun DeliveryHomeScreen(
                     IconButton(onClick = { onProfileClick() }) {
                         Icon(Icons.Default.Person, contentDescription = "Profile")
                     }
-                    IconButton(onClick = { onLogoutClick() }) {
+                    LogoutButton(onClick = { onLogoutClick() }) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 }

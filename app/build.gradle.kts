@@ -139,9 +139,13 @@ dependencies {
 
 
     // Update to the latest versions
-    implementation ("com.google.android.gms:play-services-auth:20.7.0")
-    implementation ("com.google.firebase:firebase-auth:22.3.0")
-    implementation ("com.google.firebase:firebase-firestore:24.10.0")
+//    implementation ("com.google.android.gms:play-services-auth:20.7.0")
+//    implementation ("com.google.firebase:firebase-auth:22.3.0")
+//    implementation ("com.google.firebase:firebase-firestore:24.10.0")
+    // ✅ Use Firebase BoM correctly
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore.ktx)
 
 
 

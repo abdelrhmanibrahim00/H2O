@@ -22,7 +22,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -39,10 +38,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.h2o.store.ViewModels.Admin.AdminViewModel
 import com.h2o.store.components.DateRangeDisplay
+import com.h2o.store.components.EnhancedNotificationButton
+import com.h2o.store.components.LogoutButton
 import com.h2o.store.components.PeriodFilterButtons
 import com.h2o.store.components.rememberDateRangePickerManager
 import java.text.NumberFormat
 import java.util.Locale
+
 
 data class AdminDashboardItem(
     val title: String,
@@ -59,7 +61,9 @@ fun AdminHomeScreen(
     onManageOrders: () -> Unit,
     onManageUsers: () -> Unit,
     onViewReports: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit ,
+    onOrderSelected: (String) -> Unit  // Add this callback for order selection
+
 ) {
     // Collect state from ViewModel
     val orders by adminViewModel.orders.collectAsState()
@@ -99,7 +103,23 @@ fun AdminHomeScreen(
             TopAppBar(
                 title = { Text("Admin Dashboard") },
                 actions = {
-                    IconButton(onClick = { onLogoutClick() }) {
+                    // Enhanced Notification Button with priority system
+                    EnhancedNotificationButton(
+                        totalCount = adminViewModel.totalNotificationsCount.collectAsState().value,
+                        hasUrgentNotifications = adminViewModel.hasUrgentNotifications.collectAsState().value,
+                        notifications = adminViewModel.getAllNotificationsSorted(),
+                        onNotificationClick = {
+                            // Mark as read when notifications are viewed
+                            adminViewModel.markAllNotificationsAsRead()
+                        },
+                        onNotificationItemClick = { orderId ->
+                            // The parameter name here should match what you're passing in PrioritizedNotificationItem
+                            onOrderSelected(orderId)
+                        }
+                    )
+
+                    // Existing Logout Button
+                    LogoutButton(onClick = { onLogoutClick() }) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 }
@@ -305,3 +325,5 @@ fun AdminDashboardGrid(items: List<AdminDashboardItem>) {
         }
     }
 }
+
+

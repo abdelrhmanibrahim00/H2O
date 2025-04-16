@@ -17,16 +17,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,25 +44,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.h2o.store.ViewModels.Location.LocationViewModel
-import com.h2o.store.ViewModels.User.SignUpViewModel
-import com.h2o.store.ViewModels.User.SignUpViewModel.SignUpState
 import com.h2o.store.Navigation.Screen
 import com.h2o.store.R
 import com.h2o.store.Utils.LocationUtils
+import com.h2o.store.ViewModels.Location.LocationViewModel
+import com.h2o.store.ViewModels.User.SignUpViewModel
+import com.h2o.store.ViewModels.User.SignUpViewModel.SignUpState
 import com.h2o.store.data.models.AddressData
 import com.h2o.store.repositories.AuthRepository
+import com.h2o.store.reusableComposable.PasswordTextField
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     navController: NavHostController,
@@ -66,6 +70,7 @@ fun SignUpScreen(
     locationUtils: LocationUtils,
     onSignUpSuccess: () -> Unit,
     locationViewModel: LocationViewModel,
+    onBackPressed: () -> Unit, // Added back button handler parameter
     viewModel: SignUpViewModel = viewModel(factory = SignUpViewModel.Factory(AuthRepository()))
 ) {
     val name by viewModel.name.collectAsState()
@@ -146,197 +151,248 @@ fun SignUpScreen(
         }
     )
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 32.dp, start = 16.dp, end = 16.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        item {
-            Text(text = "Sign Up", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        // Name
-        item {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { viewModel.onNameChanged(it) },
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Email
-        item {
-            OutlinedTextField(
-                value = email,
-                onValueChange = { viewModel.onEmailChanged(it) },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Password with visibility toggle
-        item {
-            PasswordTextField(
-                password = password,
-                onPasswordChange = { viewModel.onPasswordChanged(it) }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // City (Non-editable)
-        item {
-            OutlinedTextField(
-                value = "Alexandria",
-                onValueChange = {},
-                label = { Text("City") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = false
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // District
-        item {
-            OutlinedTextField(
-                value = district,
-                onValueChange = { viewModel.onDistrictChanged(it) },
-                label = { Text("District") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Address Section with Navigation & Permission Handling
-        item {
-            if (isLoading.value) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            if (hasPermission.value) {
-                                locationUtils.requestLocationUpdates(locationViewModel)
-                                OnNavigateToMap()
-                            } else {
-                                requestPermissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    )
-                                )
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        shape = MaterialTheme.shapes.small,
-                        border = BorderStroke(1.dp, Color.Gray),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Text(
-                            text = selectedAddress,
-                            modifier = Modifier.fillMaxWidth(),
-                            color = Color.Gray
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Sign Up") },
+                navigationIcon = {
+                    IconButton(onClick = onBackPressed) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
                         )
                     }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Form fields
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Icon(
-                        painter = painterResource(id = R.drawable.baseline_location_on_24),
-                        contentDescription = "Select Location",
-                        tint = Color.DarkGray
+                // Name
+                item {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { viewModel.onNameChanged(it) },
+                        label = { Text("Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
 
-        // Phone Number
-        item {
-            OutlinedTextField(
-                value = phone.ifEmpty { "+2" },
-                onValueChange = {
-                    if (it.length <= 15) viewModel.onPhoneChanged(it)
-                },
-                label = { Text("Phone Number") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // WhatsApp Number (Optional)
-        item {
-            OutlinedTextField(
-                value = whatsapp.ifEmpty { "+2" },
-                onValueChange = {
-                    if (it.length <= 15) viewModel.onWhatsAppChanged(it)
-                },
-                label = { Text("WhatsApp Number (Optional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        // Sign-Up Button
-        item {
-            Button(
-                onClick = { viewModel.signUp() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Sign Up")
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-        }
-
-        // Navigate to Login
-        item {
-            TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
-                Text("Already have an account? Log In")
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        // Handle Sign-Up State
-        item {
-            when (val state = signUpState) {
-                is SignUpState.Idle -> {}
-                is SignUpState.Loading -> CircularProgressIndicator()
-                is SignUpState.Success -> onSignUpSuccess()
-                is SignUpState.Error -> {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error
+                // Email
+                item {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { viewModel.onEmailChanged(it) },
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                     )
+                }
+
+                // Password with visibility toggle
+                item {
+                    PasswordTextField(
+                        password = password,
+                        onPasswordChange = { viewModel.onPasswordChanged(it) }
+                    )
+                }
+
+                // City (Non-editable)
+                item {
+                    OutlinedTextField(
+                        value = "Alexandria",
+                        onValueChange = {},
+                        label = { Text("City") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = false
+                    )
+                }
+
+                // District
+                item {
+                    OutlinedTextField(
+                        value = district,
+                        onValueChange = { viewModel.onDistrictChanged(it) },
+                        label = { Text("District") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
+                // Address Section with Navigation & Permission Handling
+                item {
+                    if (isLoading.value) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (hasPermission.value) {
+                                        locationUtils.requestLocationUpdates(locationViewModel)
+                                        OnNavigateToMap()
+                                    } else {
+                                        requestPermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = MaterialTheme.shapes.small,
+                                border = BorderStroke(1.dp, Color.Gray),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = Color.Black
+                                )
+                            ) {
+                                Text(
+                                    text = selectedAddress,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color.Gray
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_location_on_24),
+                                contentDescription = "Select Location",
+                                tint = Color.DarkGray
+                            )
+                        }
+                    }
+                }
+
+                // Phone Number
+                item {
+                    OutlinedTextField(
+                        value = phone.ifEmpty { "+2" },
+                        onValueChange = {
+                            if (it.length <= 15) viewModel.onPhoneChanged(it)
+                        },
+                        label = { Text("Phone Number") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    )
+                }
+
+                // WhatsApp Number (Optional)
+                item {
+                    OutlinedTextField(
+                        value = whatsapp.ifEmpty { "+2" },
+                        onValueChange = {
+                            if (it.length <= 15) viewModel.onWhatsAppChanged(it)
+                        },
+                        label = { Text("WhatsApp Number (Optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    )
+                }
+
+                // Sign-Up Button
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { viewModel.signUp() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Sign Up")
+                    }
+                }
+
+                // Navigate to Login
+                item {
+                    TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
+                        Text("Already have an account? Log In")
+                    }
+                }
+
+                // Handle Sign-Up State with better spacing
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    when (val state = signUpState) {
+                        is SignUpState.Idle -> {}
+                        is SignUpState.Loading -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        is SignUpState.Success -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Sign up successful!",
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            LaunchedEffect(Unit) {
+                                onSignUpSuccess()
+                            }
+                        }
+                        is SignUpState.Error -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = state.message,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Add extra space at the bottom to ensure error messages are visible
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
@@ -364,34 +420,4 @@ private fun transferLocationToSignUp(
         )
         signUpViewModel.updateLocationAndAddress(location, fallbackAddress)
     }
-}
-
-@Composable
-fun PasswordTextField(
-    password: String,
-    onPasswordChange: (String) -> Unit
-) {
-    var isPasswordVisible by remember { mutableStateOf(false) }
-
-    OutlinedTextField(
-        value = password,
-        onValueChange = onPasswordChange,
-        label = { Text("Password") },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password,
-            imeAction = ImeAction.Done
-        ),
-        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = {
-            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                Icon(
-                    painter = painterResource(id = if (isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off),
-                    contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
-                    tint = Color.Gray
-                )
-            }
-        }
-    )
 }
