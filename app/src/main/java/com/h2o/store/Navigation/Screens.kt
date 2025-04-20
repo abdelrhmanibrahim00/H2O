@@ -8,7 +8,10 @@ sealed class Screen(val title: String = "", val route: String) {
     object Splash : Screen(route = "splash")
     object SignUp : Screen(route = "signup")
     object Login : Screen(route = "login")
-    object Map : Screen(route = "map")
+    object Map : Screen(route = "map?mode={mode}") {
+        // Add a function to create the route with mode parameter
+        fun createRoute(mode: String = "signup") = "map?mode=$mode"
+    }
     object Home : Screen(route = "home")
     object Cart : Screen(route = "cart")
     object Profile : Screen(route = "profile")
@@ -80,6 +83,8 @@ sealed class Screen(val title: String = "", val route: String) {
     }
 
     object InventoryAnalysis : Screen(route="inventory_analysis_screen")
+    object InventoryReportDetail : Screen(route="inventory_report_detail")
+
 
 
 

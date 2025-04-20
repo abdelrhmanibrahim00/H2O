@@ -267,71 +267,96 @@ fun DrawerContent(
                 .padding(start = 8.dp)
         )
 
-        val menuItems = listOf(
-            DrawerItem(Screen.Profile, { onProfileClick() }, "Profile", Icons.Default.Person),
-            DrawerItem(Screen.Help, { onHelpClick() }, "Help", Icons.Default.Call),
-            DrawerItem(Screen.Login, { onLogoutClick() }, "Log out", Icons.Default.Logout)
-        )
+        // Profile button
+        TextButton(
+            onClick = {
+                scope.launch {
+                    onProfileClick()
+                    scaffoldState.drawerState.close()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Profile",
+                    modifier = Modifier.padding(end = 24.dp)
+                )
+                Text(
+                    text = "Profile",
+                    style = MaterialTheme.typography.body1
+                )
+            }
+        }
 
-        menuItems.forEach { (screen, onclick, label, icon) ->
-            if (label == "Log out") {
-                // Use the LogoutButton for the logout action
-                LogoutButton(
-                    onClick = {
-                        scope.launch {
-                            scaffoldState.drawerState.close()
-                            onLogoutClick()
-                        }
-                    }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Logout,
-                            contentDescription = "Log out",
-                            modifier = Modifier.padding(end = 24.dp)
-                        )
-                        Text(
-                            text = "Log out",
-                            style = MaterialTheme.typography.body1
-                        )
-                    }
+        // Help button
+        TextButton(
+            onClick = {
+                scope.launch {
+                    onHelpClick()
+                    scaffoldState.drawerState.close()
                 }
-            } else {
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            onclick()
-                            scaffoldState.drawerState.close()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            icon,
-                            contentDescription = label,
-                            modifier = Modifier.padding(end = 24.dp)
-                        )
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.body1
-                        )
-                    }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Call,
+                    contentDescription = "Help",
+                    modifier = Modifier.padding(end = 24.dp)
+                )
+                Text(
+                    text = "Help",
+                    style = MaterialTheme.typography.body1
+                )
+            }
+        }
+
+        // Logout button with confirmation dialog
+        LogoutButton(
+            onClick = {
+                scope.launch {
+                    scaffoldState.drawerState.close()
+                    onLogoutClick()
                 }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Logout,
+                    contentDescription = "Log out",
+                    modifier = Modifier.padding(end = 24.dp)
+                )
+                Text(
+                    text = "Log out",
+                    style = MaterialTheme.typography.body1
+                )
             }
         }
     }
@@ -385,13 +410,6 @@ fun BottomSheetContent() {
 
 // Data classes for the bottom navigation and drawer items
 data class BottomNavItem(
-    val screen: Screen,
-    val onClick: () -> Unit,
-    val label: String,
-    val icon: ImageVector,
-)
-
-data class DrawerItem(
     val screen: Screen,
     val onClick: () -> Unit,
     val label: String,

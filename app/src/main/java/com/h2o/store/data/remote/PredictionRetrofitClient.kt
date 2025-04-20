@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
  */
 object PredictionRetrofitClient {
 
-    private const val BASE_URL = "http://192.168.1.100:7860/" // Replace with your actual local IP
+    private const val BASE_URL = "http://192.168.178.62:7860/" // Localhost
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

@@ -13,26 +13,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
-import androidx.compose.material.Scaffold
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Icon
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.rememberScaffoldState
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,23 +37,28 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.ViewModels.User.OrdersViewModel
+import com.h2o.store.components.MainScaffold
 import com.h2o.store.data.Orders.Order
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrdersScreen(
-    navController: NavController,
+    navController: NavHostController,
     ordersViewModel: OrdersViewModel,
+    cartViewModel: CartViewModel,
     onBackClick: () -> Unit,
-    onOrderDetails: (String) -> Unit
+    onOrderDetails: (String) -> Unit,
+    onHomeClick: () -> Unit,
+    onCartClick: () -> Unit,
+    onOrderClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    onHelpClick: () -> Unit,
+    onLogoutClick: () -> Unit
 ) {
-    // Initialize scaffold state
-    val scaffoldState = rememberScaffoldState()
-
     // Get orders state
     val orderState by ordersViewModel.orderState.collectAsState()
     val orders = orderState.orders
@@ -74,25 +71,16 @@ fun OrdersScreen(
         println("OrdersScreen Current User ID: ${currentUser?.uid ?: "No user ID"}")
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        scaffoldState = scaffoldState,
-        topBar = {
-            Surface(
-                modifier = Modifier.statusBarsPadding()
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(text = "My Orders")
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                        }
-                    }
-                )
-            }
-        }
+    MainScaffold(
+        navController = navController,
+        cartViewModel = cartViewModel,
+        title = "My Orders",
+        onHomeClick = onHomeClick,
+        onCartClick = onCartClick,
+        onOrderClick = onOrderClick,
+        onProfileClick = onProfileClick,
+        onHelpClick = onHelpClick,
+        onLogoutClick = onLogoutClick
     ) { paddingValues ->
         OrdersList(
             orders = orders,
@@ -100,7 +88,12 @@ fun OrdersScreen(
             error = error,
             onOrderClick = onOrderDetails,
             ordersViewModel = ordersViewModel,
-            paddingValues = paddingValues
+            paddingValues = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding(),
+                start = 16.dp,
+                end = 16.dp
+            )
         )
     }
 }
@@ -146,7 +139,7 @@ fun OrdersList(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = error,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.body1,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -162,13 +155,13 @@ fun OrdersList(
                 ) {
                     Text(
                         text = "No orders found",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.h5,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Your order history will appear here once you place an order",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.body1,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -220,7 +213,7 @@ fun OrderItem(
                 Text(
                     text = "Order ${ordersViewModel.getFormattedOrderId(order.orderId)}",
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.subtitle1
                 )
 
                 Box(
@@ -234,7 +227,7 @@ fun OrderItem(
                     Text(
                         text = order.status,
                         color = Color.White,
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.caption
                     )
                 }
             }
@@ -243,7 +236,7 @@ fun OrderItem(
 
             Text(
                 text = "Placed on: ${ordersViewModel.getFormattedOrderDate(order)}",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.body2
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -277,7 +270,7 @@ fun OrderItem(
                     ) {
                         Text(
                             text = "+$remainingItemsCount",
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.caption
                         )
                     }
                 }
@@ -292,13 +285,13 @@ fun OrderItem(
             ) {
                 Text(
                     text = "${order.items.sumOf { it.quantity }} items",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.body2
                 )
 
                 Text(
                     text = "${order.total} EGP",
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.subtitle1
                 )
             }
         }

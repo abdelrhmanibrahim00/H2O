@@ -10,10 +10,10 @@ import retrofit2.http.POST
 interface InventoryPredictionApiService {
 
     @POST("predict")
-    suspend fun predictSingleProduct(@Body productData: Map<String, Any>): Response<PredictionResponse>
+    suspend fun predictSingleProduct(@Body productData: ProductData): Response<PredictionResponse>
 
     @POST("bulk_recommendations")
-    suspend fun generateBulkRecommendations(@Body productsData: Map<String, Any>): Response<BulkPredictionResponse>
+    suspend fun generateBulkRecommendations(@Body request: BulkPredictionRequest): Response<BulkPredictionResponse>
 }
 
 /**
@@ -33,4 +33,42 @@ data class BulkPredictionResponse(
     val predictions: List<PredictionResponse>,
     val generatedAt: String,
     val status: String
+)
+
+/**
+ * Request model for bulk prediction API
+ */
+data class BulkPredictionRequest(
+    val products: List<ProductData>,
+    val orders: List<OrderData>
+)
+
+/**
+ * Product data model for prediction
+ */
+data class ProductData(
+    val productId: String,
+    val name: String,
+    val category: String,
+    val currentStock: Long,
+    val price: Double,
+    val lastRestocked: Long
+)
+
+/**
+ * Order data model for prediction
+ */
+data class OrderData(
+    val orderId: String,
+    val timestamp: Long,
+    val items: List<OrderItemData>
+)
+
+/**
+ * Order item data model
+ */
+data class OrderItemData(
+    val productId: String,
+    val quantity: Int,
+    val price: Double
 )

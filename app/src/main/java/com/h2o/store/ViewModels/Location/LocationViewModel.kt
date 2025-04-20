@@ -5,7 +5,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.h2o.store.BuildConfig // Replace with your actual package name
+import com.h2o.store.BuildConfig
 import com.h2o.store.data.models.AddressData
 import com.h2o.store.data.models.GeocodingResult
 import com.h2o.store.data.models.LocationData
@@ -15,9 +15,19 @@ import com.h2o.store.domain.usecases.GetCoordinatesFromAddress
 import com.h2o.store.domain.usecases.GetPlacePredictions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+enum class LocationLoadingState {
+    IDLE,
+    LOADING,
+    LOCATION_READY,
+    TIMEOUT,
+    ERROR
+}
 
 class LocationViewModel(
     private val getAddressFromCoordinates: GetAddressFromCoordinates,
@@ -26,9 +36,11 @@ class LocationViewModel(
 ) : ViewModel() {
 
     private val _apiKey = BuildConfig.MAPS_API_KEY
+
     init {
         Log.d("MapsDebug", "API Key: ${_apiKey}")
     }
+
     private val _location = MutableStateFlow<LocationData?>(null)
     val location = _location.asStateFlow()
 
@@ -53,9 +65,81 @@ class LocationViewModel(
     private val _locationUpdatedFromSearch = MutableStateFlow(false)
     val locationUpdatedFromSearch = _locationUpdatedFromSearch.asStateFlow()
 
+    // Add a loading state for location updates
+    private val _locationLoadingState = MutableStateFlow(LocationLoadingState.IDLE)
+    val locationLoadingState: StateFlow<LocationLoadingState> = _locationLoadingState.asStateFlow()
+
+    // Add a timeRemaining for countdown display (in seconds)
+    private val _timeRemaining = MutableStateFlow(0)
+    val timeRemaining: StateFlow<Int> = _timeRemaining.asStateFlow()
+
+    // Add job to handle timeout
+    private var locationTimeoutJob: Job? = null
+
+    // Store location for passing between screens
+    private val _storedLocation = MutableStateFlow<LocationData?>(null)
+    val storedLocation: StateFlow<LocationData?> = _storedLocation.asStateFlow()
+
+    // Callback storage for map location selection
+    private var locationSelectedCallback: ((LocationData, AddressData) -> Unit)? = null
+
     fun updateLocation(newLocation: LocationData) {
         if (_location.value != newLocation) {
             _location.value = newLocation
+
+            // If we're in LOADING state and get a location, transition to LOCATION_READY
+            if (_locationLoadingState.value == LocationLoadingState.LOADING) {
+                _locationLoadingState.value = LocationLoadingState.LOCATION_READY
+                locationTimeoutJob?.cancel() // Cancel timeout job if it's running
+            }
+        }
+    }
+
+    // In the LocationViewModel class
+    fun startLocationUpdates(timeoutDuration: Long = 8000L) {
+        // Reset state
+        _locationLoadingState.value = LocationLoadingState.LOADING
+
+        // Set up timeout with countdown
+        locationTimeoutJob?.cancel()
+        locationTimeoutJob = viewModelScope.launch {
+            try {
+                // Calculate countdown values (every second)
+                val totalSeconds = (timeoutDuration / 1000).toInt()
+                for (i in totalSeconds downTo 1) {
+                    _timeRemaining.value = i
+                    delay(1000)
+                }
+
+                // If we reach here, timeout has occurred without getting location
+                if (_locationLoadingState.value == LocationLoadingState.LOADING) {
+                    _locationLoadingState.value = LocationLoadingState.TIMEOUT
+                    Log.d("LocationViewModel", "Location request timed out after ${timeoutDuration}ms")
+                }
+            } catch (e: Exception) {
+                // THIS IS WHERE THE CHANGE SHOULD HAPPEN
+                if (e is kotlinx.coroutines.CancellationException) {
+                    // This is a normal cancellation, not an error
+                    Log.d("LocationViewModel", "Location timeout cancelled normally")
+                    // Don't change the state to ERROR
+                } else {
+                    Log.e("LocationViewModel", "Error during location timeout: ${e.message}")
+                    _locationLoadingState.value = LocationLoadingState.ERROR
+                }
+            }
+        }
+    }
+
+    fun resetLocationState() {
+        _locationLoadingState.value = LocationLoadingState.IDLE
+        locationTimeoutJob?.cancel()
+    }
+
+    fun skipLocationWait() {
+        // User manually skipped the wait - cancel timeout and proceed
+        locationTimeoutJob?.cancel()
+        if (_locationLoadingState.value == LocationLoadingState.LOADING) {
+            _locationLoadingState.value = LocationLoadingState.TIMEOUT
         }
     }
 
@@ -252,5 +336,40 @@ class LocationViewModel(
                 e.printStackTrace()
             }
         }
+    }
+
+    // New methods for callback and navigation support
+
+    /**
+     * Store callback for location selection and the current location
+     */
+    fun storeLocationCallback(callback: (LocationData, AddressData) -> Unit) {
+        locationSelectedCallback = callback
+
+        // Store current location when navigating to map
+        _location.value?.let { currentLocation ->
+            _storedLocation.value = currentLocation
+        }
+    }
+
+    /**
+     * Get stored callback
+     */
+    fun getLocationCallback(): ((LocationData, AddressData) -> Unit)? {
+        return locationSelectedCallback
+    }
+
+    /**
+     * Clear stored callback after use
+     */
+    fun clearLocationCallback() {
+        locationSelectedCallback = null
+    }
+
+    /**
+     * Updates stored location data (used for initializing map in edit mode)
+     */
+    fun updateStoredLocation(locationData: LocationData?) {
+        _storedLocation.value = locationData
     }
 }

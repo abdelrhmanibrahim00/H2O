@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,28 +40,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.h2o.store.Navigation.Screen
-import com.h2o.store.R
 import com.h2o.store.Utils.LocationUtils
+import com.h2o.store.ViewModels.Location.LocationLoadingState
 import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.ViewModels.User.SignUpViewModel
 import com.h2o.store.ViewModels.User.SignUpViewModel.SignUpState
-import com.h2o.store.data.models.AddressData
 import com.h2o.store.repositories.AuthRepository
 import com.h2o.store.reusableComposable.PasswordTextField
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +67,7 @@ fun SignUpScreen(
     locationUtils: LocationUtils,
     onSignUpSuccess: () -> Unit,
     locationViewModel: LocationViewModel,
-    onBackPressed: () -> Unit, // Added back button handler parameter
+    onBackPressed: () -> Unit,
     viewModel: SignUpViewModel = viewModel(factory = SignUpViewModel.Factory(AuthRepository()))
 ) {
     val name by viewModel.name.collectAsState()
@@ -86,6 +83,8 @@ fun SignUpScreen(
     val userLocation by locationViewModel.location.collectAsState()
     val structuredAddress by locationViewModel.structuredAddress.collectAsState()
     val streetAddress by locationViewModel.streetAddress.collectAsState()
+    val locationLoadingState by locationViewModel.locationLoadingState.collectAsState()
+    val timeRemaining by locationViewModel.timeRemaining.collectAsState()
 
     // Effect to update address display when address data changes
     LaunchedEffect(userLocation, structuredAddress) {
@@ -119,9 +118,6 @@ fun SignUpScreen(
     val hasPermission = remember { mutableStateOf(locationUtils.hasLocationPermission(context)) }
 
     // Handle permission request
-    val isLoading = remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissions ->
@@ -129,14 +125,10 @@ fun SignUpScreen(
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
 
                 hasPermission.value = true
-                isLoading.value = true
-                locationUtils.requestLocationUpdates(locationViewModel)
 
-                coroutineScope.launch {
-                    delay(8000)
-                    isLoading.value = false
-                    OnNavigateToMap()
-                }
+                // Start location updates with timeout handling in ViewModel
+                locationUtils.requestLocationUpdates(locationViewModel)
+                locationViewModel.startLocationUpdates()
             } else {
                 val rationaleRequired = ActivityCompat.shouldShowRequestPermissionRationale(
                     context as android.app.Activity,
@@ -150,6 +142,31 @@ fun SignUpScreen(
             }
         }
     )
+
+    // Handle location state changes
+    LaunchedEffect(locationLoadingState) {
+        when (locationLoadingState) {
+            LocationLoadingState.LOCATION_READY -> {
+                // Location is ready, navigate to map
+                OnNavigateToMap()
+                // Reset loading state after navigation
+                locationViewModel.resetLocationState()
+            }
+            LocationLoadingState.TIMEOUT -> {
+                // Timeout occurred, we can still navigate to map with whatever
+                // location data we have (or none)
+                OnNavigateToMap()
+                // Reset loading state after navigation
+                locationViewModel.resetLocationState()
+            }
+            LocationLoadingState.ERROR -> {
+                // Show error toast and reset state
+                Toast.makeText(context, "Error getting location. Please try again.", Toast.LENGTH_SHORT).show()
+                locationViewModel.resetLocationState()
+            }
+            else -> {} // No action needed for IDLE or LOADING states
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -239,60 +256,106 @@ fun SignUpScreen(
                 }
 
                 // Address Section with Navigation & Permission Handling
+                // Replace the current loading UI in the SignUpScreen's item block
+// for the Address Section with this improved version
+
                 item {
-                    if (isLoading.value) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    if (hasPermission.value) {
-                                        locationUtils.requestLocationUpdates(locationViewModel)
-                                        OnNavigateToMap()
-                                    } else {
-                                        requestPermissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
-                                        )
-                                    }
-                                },
+                    when (locationLoadingState) {
+                        LocationLoadingState.LOADING -> {
+                            // Improved loading UI with circular progress indicator
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp),
-                                shape = MaterialTheme.shapes.small,
-                                border = BorderStroke(1.dp, Color.Gray),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color.Transparent,
-                                    contentColor = Color.Black
-                                )
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Text(
-                                    text = selectedAddress,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = Color.Gray
+                                OutlinedButton(
+                                    onClick = { /* No action while loading */ },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    border = BorderStroke(1.dp, Color.Gray),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color.Gray
+                                    ),
+                                    enabled = false
+                                ) {
+                                    Text(
+                                        text = "Getting location...",
+                                        modifier = Modifier.weight(1f),
+                                        color = Color.Gray
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier.size(40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+
+                                // Skip button as a small button
+                                TextButton(
+                                    onClick = { locationViewModel.skipLocationWait() },
+                                    modifier = Modifier.padding(start = 4.dp)
+                                ) {
+                                    Text("Skip", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                        else -> {
+                            // Keep the original address selection UI for non-loading states
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (hasPermission.value) {
+                                            // If we already have permission, start updates and go to map
+                                            locationUtils.requestLocationUpdates(locationViewModel)
+                                            OnNavigateToMap()
+                                        } else {
+                                            // Otherwise request permissions first
+                                            requestPermissionLauncher.launch(
+                                                arrayOf(
+                                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                                )
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    border = BorderStroke(1.dp, Color.Gray),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color.Black
+                                    )
+                                ) {
+                                    Text(
+                                        text = selectedAddress,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = Color.Gray
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = "Select Location",
+                                    tint = Color.DarkGray
                                 )
                             }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Icon(
-                                painter = painterResource(id = R.drawable.baseline_location_on_24),
-                                contentDescription = "Select Location",
-                                tint = Color.DarkGray
-                            )
                         }
                     }
                 }
@@ -396,28 +459,5 @@ fun SignUpScreen(
                 }
             }
         }
-    }
-}
-
-// Helper function to transfer location data from LocationViewModel to SignUpViewModel
-private fun transferLocationToSignUp(
-    locationViewModel: LocationViewModel,
-    signUpViewModel: SignUpViewModel
-) {
-    val location = locationViewModel.location.value
-    val structuredAddress = locationViewModel.structuredAddress.value
-    val streetAddress = locationViewModel.streetAddress.value
-
-    if (location != null && structuredAddress != null) {
-        // Transfer both location and structured address
-        signUpViewModel.updateLocationAndAddress(location, structuredAddress)
-    } else if (location != null && streetAddress.isNotEmpty()) {
-        // Fallback if we only have street address
-        val fallbackAddress = AddressData(
-            street = streetAddress,
-            city = "Alexandria",
-            formattedAddress = streetAddress
-        )
-        signUpViewModel.updateLocationAndAddress(location, fallbackAddress)
     }
 }

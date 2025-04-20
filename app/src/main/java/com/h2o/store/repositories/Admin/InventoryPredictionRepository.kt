@@ -2,9 +2,13 @@ package com.h2o.store.repositories
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.h2o.store.data.remote.BulkPredictionRequest
 import com.h2o.store.data.remote.BulkPredictionResponse
-import com.h2o.store.data.remote.PredictionRetrofitClient
+import com.h2o.store.data.remote.OrderData
+import com.h2o.store.data.remote.OrderItemData
 import com.h2o.store.data.remote.PredictionResponse
+import com.h2o.store.data.remote.PredictionRetrofitClient
+import com.h2o.store.data.remote.ProductData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -27,48 +31,72 @@ class InventoryPredictionRepository {
             try {
                 Log.d(TAG, "Fetching data for inventory prediction report")
 
-                // Fetch products data from Firebase
-                val productsCollection = db.collection("inventory").get().await()
+                // Use "products" collection instead of "inventory"
+                val productsCollection = db.collection("products").get().await()
                 val ordersCollection = db.collection("orders").get().await()
 
                 Log.d(TAG, "Fetched ${productsCollection.size()} products and ${ordersCollection.size()} orders")
 
-                // Create data map to send to API
-                val requestData = mapOf(
-                    "products" to productsCollection.documents.mapNotNull { doc ->
-                        try {
-                            mapOf(
-                                "productId" to doc.id,
-                                "name" to (doc.getString("name") ?: "Unknown"),
-                                "category" to (doc.getString("category") ?: "Uncategorized"),
-                                "currentStock" to (doc.getLong("quantity") ?: 0),
-                                "price" to (doc.getDouble("price") ?: 0.0),
-                                "lastRestocked" to (doc.getTimestamp("lastRestocked")?.toDate()?.time ?: Date().time)
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error mapping product ${doc.id}: ${e.message}")
-                            null
-                        }
-                    },
-                    "orders" to ordersCollection.documents.mapNotNull { doc ->
-                        try {
-                            val items = doc.get("items") as? List<Map<String, Any>> ?: emptyList<Map<String, Any>>()
-                            mapOf(
-                                "orderId" to doc.id,
-                                "timestamp" to (doc.getTimestamp("orderDate")?.toDate()?.time ?: Date().time),
-                                "items" to items
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error mapping order ${doc.id}: ${e.message}")
-                            null
-                        }
+                // If no products, return error
+                if (productsCollection.isEmpty) {
+                    Log.e(TAG, "No products found in 'products' collection - please check your Firebase database")
+                    return@withContext Result.failure(Exception("No products found in database. Cannot generate predictions."))
+                }
+
+                // Map Firebase documents to our data models
+                val products = productsCollection.documents.mapNotNull { doc ->
+                    try {
+                        ProductData(
+                            productId = doc.id,
+                            name = doc.getString("name") ?: "Unknown",
+                            category = doc.getString("category") ?: "Uncategorized",
+                            currentStock = doc.getLong("quantity") ?: 0L,
+                            price = doc.getDouble("price") ?: 0.0,
+                            lastRestocked = doc.getTimestamp("lastRestocked")?.toDate()?.time ?: Date().time
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error mapping product ${doc.id}: ${e.message}")
+                        null
                     }
+                }
+
+                val orders = ordersCollection.documents.mapNotNull { doc ->
+                    try {
+                        // Map items from order document
+                        val orderItems = (doc.get("items") as? List<Map<String, Any>>)?.mapNotNull { item ->
+                            try {
+                                OrderItemData(
+                                    productId = item["productId"] as? String ?: "",
+                                    quantity = (item["quantity"] as? Number)?.toInt() ?: 0,
+                                    price = (item["price"] as? Number)?.toDouble() ?: 0.0
+                                )
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error mapping order item: ${e.message}")
+                                null
+                            }
+                        } ?: emptyList()
+
+                        OrderData(
+                            orderId = doc.id,
+                            timestamp = doc.getTimestamp("orderDate")?.toDate()?.time ?: Date().time,
+                            items = orderItems
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error mapping order ${doc.id}: ${e.message}")
+                        null
+                    }
+                }
+
+                // Create request object using our data models
+                val request = BulkPredictionRequest(
+                    products = products,
+                    orders = orders
                 )
 
                 Log.d(TAG, "Sending data to prediction API")
 
                 // Send to prediction API
-                val response = predictionService.generateBulkRecommendations(requestData)
+                val response = predictionService.generateBulkRecommendations(request)
 
                 if (response.isSuccessful && response.body() != null) {
                     Log.d(TAG, "Successfully received prediction response")
@@ -92,44 +120,25 @@ class InventoryPredictionRepository {
             try {
                 Log.d(TAG, "Fetching data for single product prediction: $productId")
 
-                // Fetch product data
-                val productDoc = db.collection("inventory").document(productId).get().await()
+                // Use "products" collection instead of "inventory"
+                val productDoc = db.collection("products").document(productId).get().await()
 
                 if (!productDoc.exists()) {
                     return@withContext Result.failure(Exception("Product not found"))
                 }
 
-                // Fetch recent orders containing this product
-                val ordersWithProduct = db.collection("orders")
-                    .get()
-                    .await()
-                    .documents
-                    .filter { doc ->
-                        val items = doc.get("items") as? List<Map<String, Any>> ?: emptyList<Map<String, Any>>()
-                        items.any { item ->
-                            item["productId"] == productId
-                        }
-                    }
-
-                // Create request data
-                val requestData = mapOf(
-                    "productId" to productId,
-                    "name" to (productDoc.getString("name") ?: "Unknown"),
-                    "category" to (productDoc.getString("category") ?: "Uncategorized"),
-                    "currentStock" to (productDoc.getLong("quantity") ?: 0),
-                    "price" to (productDoc.getDouble("price") ?: 0.0),
-                    "lastRestocked" to (productDoc.getTimestamp("lastRestocked")?.toDate()?.time ?: Date().time),
-                    "orderHistory" to ordersWithProduct.map { doc ->
-                        mapOf(
-                            "orderId" to doc.id,
-                            "timestamp" to (doc.getTimestamp("orderDate")?.toDate()?.time ?: Date().time),
-                            "quantity" to getProductQuantityInOrder(doc, productId)
-                        )
-                    }
+                // Create product data model
+                val productData = ProductData(
+                    productId = productId,
+                    name = productDoc.getString("name") ?: "Unknown",
+                    category = productDoc.getString("category") ?: "Uncategorized",
+                    currentStock = productDoc.getLong("quantity") ?: 0L,
+                    price = productDoc.getDouble("price") ?: 0.0,
+                    lastRestocked = productDoc.getTimestamp("lastRestocked")?.toDate()?.time ?: Date().time
                 )
 
                 // Send to prediction API
-                val response = predictionService.predictSingleProduct(requestData)
+                val response = predictionService.predictSingleProduct(productData)
 
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!)
@@ -140,22 +149,6 @@ class InventoryPredictionRepository {
                 Log.e(TAG, "Error predicting single product: ${e.message}")
                 Result.failure(e)
             }
-        }
-    }
-
-    /**
-     * Helper function to extract product quantity from an order
-     */
-    private fun getProductQuantityInOrder(orderDoc: com.google.firebase.firestore.DocumentSnapshot, productId: String): Int {
-        try {
-            val items = orderDoc.get("items") as? List<Map<String, Any>> ?: return 0
-
-            return items.find { it["productId"] == productId }?.let {
-                (it["quantity"] as? Number)?.toInt() ?: 0
-            } ?: 0
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting product quantity: ${e.message}")
-            return 0
         }
     }
 }

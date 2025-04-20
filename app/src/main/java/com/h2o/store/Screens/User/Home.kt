@@ -191,7 +191,7 @@ private fun MainContent(
 
                                 // Stock Status
                                 Text(
-                                    text = "In Stock: ${product.quantity}",
+                                    text = "Quantity: ${product.quantity}",
                                     style = MaterialTheme.typography.caption,
                                     color = if (product.stock > 0) Color.Green else Color.Red
                                 )

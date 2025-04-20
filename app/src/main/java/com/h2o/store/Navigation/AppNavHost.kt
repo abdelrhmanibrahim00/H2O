@@ -2,6 +2,7 @@ package com.h2o.store.Navigation
 
 //import com.h2o.store.ViewModels.Admin.ManageProductsViewModel
 import DeliveryHomeScreen
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -28,6 +29,7 @@ import com.h2o.store.Screens.Admin.ManageUsersScreen
 import com.h2o.store.Screens.Admin.ProductDetailsScreen
 import com.h2o.store.Screens.Admin.UserDetailsScreen
 import com.h2o.store.Screens.AdminHomeScreen
+import com.h2o.store.Screens.DetailedReportScreen
 import com.h2o.store.Screens.EditProfileScreen
 import com.h2o.store.Screens.InventoryAnalysisScreen
 import com.h2o.store.Screens.LoginScreen
@@ -38,6 +40,7 @@ import com.h2o.store.Screens.User.CartScreenWrapper
 import com.h2o.store.Screens.User.CheckoutScreenWrapper
 import com.h2o.store.Screens.User.HomeScreen
 import com.h2o.store.Screens.User.MapScreen
+import com.h2o.store.Screens.User.MapScreenMode
 import com.h2o.store.Screens.User.OrderDetailsScreen
 import com.h2o.store.Screens.User.OrdersScreen
 import com.h2o.store.Screens.User.SignUpScreen
@@ -66,6 +69,7 @@ import com.h2o.store.repositories.InventoryPredictionRepository
 import com.h2o.store.repositories.LocationRepository
 import com.h2o.store.repositories.ProfileRepository
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun AppNavHost(navController: NavHostController, context: Context) {
 
@@ -213,7 +217,9 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 navController = navController,
                 context = context,
                 OnNavigateToMap = {
-                    navController.navigate(Screen.Map.route)
+                  //  navController.navigate(Screen.Map.route)
+                    // From SignUpScreen - for new user location
+                    navController.navigate(Screen.Map.createRoute("signup"))
                 },
                 locationUtils = locationUtils,
                 onSignUpSuccess = {
@@ -229,17 +235,44 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             )
         }
 
-        composable(Screen.Map.route) {
+        composable(
+            route = Screen.Map.route,
+            arguments = listOf(
+                navArgument("mode") {
+                    type = NavType.StringType
+                    defaultValue = "signup"
+                    nullable = true
+                }
+            )
+        ) { backStackEntry ->
+            // Extract the mode parameter
+            val mode = backStackEntry.arguments?.getString("mode") ?: "signup"
+
+            // Import the MapScreenMode enum from your MapScreen file
+            val mapMode = if (mode == "edit") MapScreenMode.EDIT_PROFILE else MapScreenMode.SIGNUP
+
             MapScreen(
                 locationViewModel = locationViewModel,
                 onLocationSelected = { locationData: LocationData, addressData: AddressData ->
-                    // Update the SignUpViewModel with selected location data
-                    signUpViewModel.updateLocationAndAddress(locationData, addressData)
+                    // Handle differently based on mode
+                    if (mode == "signup") {
+                        // Update SignUpViewModel
+                        signUpViewModel.updateLocationAndAddress(locationData, addressData)
+                    } else if (mode == "edit") {
+                        // Update profile - using the correct method name
+                        profileViewModel.updateLocationAndAddress(locationData, addressData)
+                        // After updating the location, you might want to save the changes to the database
+                        profileViewModel.updateLocation()
+                    }
                     navController.popBackStack()
                 },
                 onBackPressed = {
                     navController.popBackStack()
-                }
+                },
+                // Use the corrected mapMode variable
+                mode = mapMode,
+                // Use the correct property name from ProfileViewModel
+                initialLocation = if (mode == "edit") profileViewModel.locationData.value else null
             )
         }
 
@@ -281,8 +314,7 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 cartViewModel = cartViewModel
             )
         }
-
-        // Add the checkout screen route
+        // the checkout screen route
         composable(Screen.Checkout.route) {
             CheckoutScreenWrapper(
                 navController = navController,
@@ -297,46 +329,73 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                     // Go back to cart when back button is pressed
                     navController.popBackStack()
                 },
-                onEditAddress = {}
+                onEditAddress = {navController.navigate(Screen.EditProfile.route)}
             )
         }
+
+        //  Orders Screen
+        composable(Screen.Orders.route) {
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            val userId = currentUser?.uid ?: ""
+
+            // Orders ViewModel
+            val ordersViewModel: OrdersViewModel = viewModel(
+                factory = OrdersViewModel.Factory(userId, orderRepository),
+                viewModelStoreOwner = viewModelStoreOwner
+            )
+
+            // Cart ViewModel (needed for MainScaffold)
+            val cartViewModel: CartViewModel = viewModel(
+                factory = CartViewModel.Factory(userId)
+            )
+
+            OrdersScreen(
+                navController = navController,
+                ordersViewModel = ordersViewModel,
+                cartViewModel = cartViewModel,
+                onBackClick = { /* Not used anymore */ },
+                onOrderDetails = { orderId ->
+                    navController.navigate(Screen.OrderDetails.createRoute(orderId))
+                },
+                onHomeClick = { navController.navigate(Screen.Home.route) },
+                onCartClick = { navController.navigate(Screen.Cart.route) },
+                onOrderClick = { /* Already on Orders screen */ },
+                onProfileClick = { navController.navigate(Screen.Profile.route) },
+                onHelpClick = onHelpClick,
+                onLogoutClick = onLogoutClick
+            )
+        }
+
+
 
         composable(Screen.Profile.route) {
             ProfileScreen(
                 viewModel = profileViewModel,
                 navController = navController,
-                onEditProfile = { navController.navigate(Screen.EditProfile.route) }
+                onEditProfile = {
+                    navController.navigate(Screen.EditProfile.route)
+                }
             )
         }
 
         composable(Screen.EditProfile.route) {
             EditProfileScreen(
                 viewModel = profileViewModel,
-                navController = navController
-            )
-        }
-
-        // Add Orders Screen route
-        composable(Screen.Orders.route) {
-            // Use the CartScreenWrapper instead of CartScreen
-            val currentUser2 = FirebaseAuth.getInstance().currentUser
-            val userId = currentUser2?.uid ?: ""
-            // Orders ViewModel
-            val ordersViewModel: OrdersViewModel = viewModel(
-                factory = OrdersViewModel.Factory(userId, orderRepository),
-                viewModelStoreOwner = viewModelStoreOwner
-            )
-            OrdersScreen(
                 navController = navController,
-                ordersViewModel = ordersViewModel,
-                onBackClick = {
-                    navController.popBackStack()
-                },
-                onOrderDetails = { orderId ->
-                    navController.navigate(Screen.OrderDetails.createRoute(orderId))
+                onNavigateToMap = { initialLocation, onLocationSelected ->
+                    // Store callback in LocationViewModel or use another approach to pass it
+                    // For this example, we'll store it in a simple way
+                    locationViewModel.storeLocationCallback(onLocationSelected)
+
+                    // Navigate to map screen with edit_profile mode
+                  //  navController.navigate(Screen.Map.route)
+                    // From ProfileScreen - for editing existing location
+                    navController.navigate(Screen.Map.createRoute("edit"))
                 }
             )
         }
+
+
 
         // Add Order Details Screen route with parameter
         composable(
@@ -641,13 +700,26 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             )
         }
 
-        // View analysis
         composable(Screen.InventoryAnalysis.route) {
-
-
             InventoryAnalysisScreen(
                 navController = navController,
-                viewModel = inventoryAnalysisViewModel
+                viewModel = inventoryAnalysisViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onViewDetailedReport = {
+                    // Navigate to the detailed report screen
+                    navController.navigate(Screen.InventoryReportDetail.route)
+                }
+            )
+        }
+
+        composable(Screen.InventoryReportDetail.route) {
+            DetailedReportScreen(
+                viewModel = inventoryAnalysisViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
     }

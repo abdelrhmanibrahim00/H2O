@@ -4,6 +4,8 @@ import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.h2o.store.data.models.AddressData
+import com.h2o.store.data.models.LocationData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
@@ -16,6 +18,9 @@ data class User(
     val whatsapp: String = "",
     val district: String = "",
     val city: String = "",
+    // Added location and address fields
+    val location: LocationData? = null,
+    val address: AddressData? = null
     // Add any other user fields you need
 )
 
@@ -113,6 +118,31 @@ class ProfileRepository {
                 val district = snapshot.getString("district") ?: ""
                 val city = snapshot.getString("city") ?: ""
 
+                // Extract location data if available
+                var location: LocationData? = null
+                val locationMap = snapshot.get("location") as? Map<String, Any>
+                if (locationMap != null) {
+                    val latitude = locationMap["latitude"] as? Double
+                    val longitude = locationMap["longitude"] as? Double
+                    if (latitude != null && longitude != null) {
+                        location = LocationData(latitude, longitude)
+                    }
+                }
+
+                // Extract address data if available
+                var address: AddressData? = null
+                val addressMap = snapshot.get("address") as? Map<String, Any>
+                if (addressMap != null) {
+                    address = AddressData(
+                        street = addressMap["street"] as? String ?: "",
+                        city = addressMap["city"] as? String ?: "",
+                        state = addressMap["state"] as? String ?: "",
+                        country = addressMap["country"] as? String ?: "",
+                        postalCode = addressMap["postalCode"] as? String ?: "",
+                        formattedAddress = addressMap["formattedAddress"] as? String ?: ""
+                    )
+                }
+
                 val user = User(
                     id = userId,
                     name = name,
@@ -120,7 +150,9 @@ class ProfileRepository {
                     phone = phone,
                     whatsapp = whatsapp,
                     district = district,
-                    city = city
+                    city = city,
+                    location = location,
+                    address = address
                 )
 
                 emit(Result.success(user))
@@ -153,13 +185,15 @@ class ProfileRepository {
         }
     }
 
-    // Optional: Update user data
+    // Update user data with location and address
     suspend fun updateUserData(
         name: String? = null,
         phone: String? = null,
         whatsapp: String? = null,
         district: String? = null,
         city: String? = null,
+        location: LocationData? = null,
+        address: AddressData? = null,
         onResult: (Boolean, String?) -> Unit
     ) {
         try {
@@ -193,6 +227,28 @@ class ProfileRepository {
             whatsapp?.let { updateData["whatsapp"] = it }
             district?.let { updateData["district"] = it }
             city?.let { updateData["city"] = it }
+
+            // Add location data if provided
+            location?.let {
+                val locationMap = mapOf(
+                    "latitude" to it.latitude,
+                    "longitude" to it.longitude
+                )
+                updateData["location"] = locationMap
+            }
+
+            // Add address data if provided
+            address?.let {
+                val addressMap = mapOf(
+                    "street" to it.street,
+                    "city" to it.city,
+                    "state" to it.state,
+                    "country" to it.country,
+                    "postalCode" to it.postalCode,
+                    "formattedAddress" to it.formattedAddress
+                )
+                updateData["address"] = addressMap
+            }
 
             if (updateData.isEmpty()) {
                 Log.d(TAG, "No data to update")

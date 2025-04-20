@@ -229,7 +229,7 @@ fun CheckoutContent(
     paddingValues: PaddingValues
 ) {
     // State for selected payment method
-    val paymentOptions = listOf("Cash on Delivery", "Credit Card", "Digital Wallet")
+    val paymentOptions = listOf("Cash on Delivery", "Credit Card")
     var selectedPayment by remember { mutableStateOf(paymentOptions[0]) }
 
     Column(

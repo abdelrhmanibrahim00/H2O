@@ -6,6 +6,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.h2o.store.data.models.AddressData
+import com.h2o.store.data.models.LocationData
 import com.h2o.store.repositories.ProfileRepository
 import com.h2o.store.repositories.User
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +19,7 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
     private val _profileState = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val profileState = _profileState.asStateFlow()
 
-    // Optional: editable fields if you want to add editing capability
+    // Editable user fields
     private val _name = MutableStateFlow("")
     val name = _name.asStateFlow()
 
@@ -32,6 +34,13 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
 
     private val _city = MutableStateFlow("")
     val city = _city.asStateFlow()
+
+    // Added location and address fields
+    private val _locationData = MutableStateFlow<LocationData?>(null)
+    val locationData = _locationData.asStateFlow()
+
+    private val _addressData = MutableStateFlow<AddressData?>(null)
+    val addressData = _addressData.asStateFlow()
 
     // Firebase auth state listener
     private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
@@ -99,6 +108,10 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
                         _whatsapp.value = user.whatsapp
                         _district.value = user.district
                         _city.value = user.city
+
+                        // Populate location and address data
+                        _locationData.value = user.location
+                        _addressData.value = user.address
                     },
                     onFailure = { e ->
                         _profileState.value =
@@ -130,6 +143,12 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
         _city.value = newCity
     }
 
+    // Method to update location and address
+    fun updateLocationAndAddress(location: LocationData, address: AddressData) {
+        _locationData.value = location
+        _addressData.value = address
+    }
+
     // Update profile
     fun updateProfile() {
         if (!userRepository.isUserLoggedIn()) {
@@ -145,12 +164,37 @@ class ProfileViewModel(private val userRepository: ProfileRepository) : ViewMode
                 phone = _phone.value,
                 whatsapp = _whatsapp.value,
                 district = _district.value,
-                city = _city.value
+                city = _city.value,
+                location = _locationData.value,
+                address = _addressData.value
             ) { success, error ->
                 if (success) {
                     loadProfile() // Reload profile after update
                 } else {
                     _profileState.value = ProfileState.Error(error ?: "Failed to update profile")
+                }
+            }
+        }
+    }
+
+    // Method to update just location and address
+    fun updateLocation() {
+        if (!userRepository.isUserLoggedIn()) {
+            _profileState.value = ProfileState.Error("User not logged in")
+            return
+        }
+
+        _profileState.value = ProfileState.Loading
+
+        viewModelScope.launch {
+            userRepository.updateUserData(
+                location = _locationData.value,
+                address = _addressData.value
+            ) { success, error ->
+                if (success) {
+                    loadProfile() // Reload profile after update
+                } else {
+                    _profileState.value = ProfileState.Error(error ?: "Failed to update location")
                 }
             }
         }

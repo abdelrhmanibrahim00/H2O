@@ -1,6 +1,7 @@
+
+// InventoryAnalysisScreen.kt
 package com.h2o.store.Screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.Card
@@ -40,7 +42,9 @@ import java.util.Locale
 @Composable
 fun InventoryAnalysisScreen(
     navController: NavController,
-    viewModel: InventoryAnalysisViewModel
+    viewModel: InventoryAnalysisViewModel,
+    onBackClick: () -> Unit = { navController.popBackStack() },
+    onViewDetailedReport: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lastGeneratedAt by viewModel.lastGeneratedAt.collectAsState()
@@ -48,12 +52,36 @@ fun InventoryAnalysisScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Inventory Optimization") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                title = {
+                    // Title moved to a row with proper alignment
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 48.dp) // Balance with back button
+                    ) {
+                        Text(
+                            "Inventory Optimization",
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
                     }
-                }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+                backgroundColor = MaterialTheme.colors.primary,
+                contentColor = Color.White,
+                elevation = 4.dp
             )
         }
     ) { paddingValues ->
@@ -61,7 +89,7 @@ fun InventoryAnalysisScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header card with explanation
@@ -75,12 +103,13 @@ fun InventoryAnalysisScreen(
                 ) {
                     Text(
                         text = "AI-Powered Inventory Optimization",
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Generate AI-driven inventory recommendations based on historical sales data and current stock levels."
+                        text = "Generate AI-driven inventory recommendations based on historical sales data and current stock levels.",
+                        fontSize = 14.sp
                     )
 
                     // Last generated timestamp
@@ -96,7 +125,6 @@ fun InventoryAnalysisScreen(
             }
 
             // Main content based on UI state
-            // Main content based on UI state
             when (uiState) {
                 is InventoryAnalysisViewModel.InventoryAnalysisUiState.Initial -> {
                     InitialStateContent(onGenerateClick = { viewModel.generateInventoryReport() })
@@ -110,7 +138,8 @@ fun InventoryAnalysisScreen(
                     val data = (uiState as InventoryAnalysisViewModel.InventoryAnalysisUiState.Success).data
                     SuccessStateContent(
                         data = data,
-                        onGenerateAgainClick = { viewModel.generateInventoryReport() }
+                        onGenerateAgainClick = { viewModel.generateInventoryReport() },
+                        onViewDetailedReportClick = onViewDetailedReport
                     )
                 }
 
@@ -133,26 +162,31 @@ fun InventoryAnalysisScreen(
 
 @Composable
 private fun InitialStateContent(onGenerateClick: () -> Unit) {
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
-            .background(MaterialTheme.colors.surface),
-        contentAlignment = Alignment.Center
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        Text(
+            text = "Ready to optimize your inventory",
+            textAlign = TextAlign.Center,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        Button(
+            onClick = onGenerateClick,
+            modifier = Modifier
+                .fillMaxWidth(0.7f) // Control button width
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(4.dp)
         ) {
             Text(
-                text = "Ready to optimize your inventory",
-                textAlign = TextAlign.Center
+                "Generate Report",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onGenerateClick
-            ) {
-                Text("Generate Report")
-            }
         }
     }
 }
@@ -166,13 +200,17 @@ private fun LoadingStateContent() {
         contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 24.dp)
         ) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(
+                modifier = Modifier.size(40.dp)
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Analyzing inventory data and generating recommendations...",
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp
             )
         }
     }
@@ -181,7 +219,8 @@ private fun LoadingStateContent() {
 @Composable
 private fun SuccessStateContent(
     data: com.h2o.store.data.remote.BulkPredictionResponse,
-    onGenerateAgainClick: () -> Unit
+    onGenerateAgainClick: () -> Unit,
+    onViewDetailedReportClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -197,31 +236,53 @@ private fun SuccessStateContent(
                 Text(
                     text = "Report Generated Successfully",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E7D32)
+                    color = Color(0xFF2E7D32),
+                    fontSize = 16.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Generated ${data.predictions.size} recommendations for your inventory."
+                    text = "Generated ${data.predictions.size} recommendations for your inventory.",
+                    fontSize = 14.sp
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Summary text - we're not displaying details here as requested
+        // Summary text
         Text(
             text = "The AI has analyzed your sales patterns and current inventory levels. " +
                     "Recommendations have been processed and are ready for your review in the full report.",
-            color = Color.DarkGray
+            color = Color.DarkGray,
+            fontSize = 14.sp
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // "View Detailed Report" button
+        Button(
+            onClick = onViewDetailedReportClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                "View Detailed Report",
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // "Generate New Report" button - more consistent with smaller button
         Button(
             onClick = onGenerateAgainClick,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 8.dp)
         ) {
-            Text("Generate New Report")
+            Text(
+                "Generate New Report",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
         }
     }
 }
@@ -246,12 +307,14 @@ private fun ErrorStateContent(
                 Text(
                     text = "Error Generating Report",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB71C1C)
+                    color = Color(0xFFB71C1C),
+                    fontSize = 16.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = errorMessage,
-                    color = Color.DarkGray
+                    color = Color.DarkGray,
+                    fontSize = 14.sp
                 )
             }
         }
@@ -259,9 +322,13 @@ private fun ErrorStateContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = onRetryClick
+            onClick = onRetryClick,
+            modifier = Modifier.padding(vertical = 8.dp)
         ) {
-            Text("Try Again")
+            Text(
+                "Try Again",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
         }
     }
 }
