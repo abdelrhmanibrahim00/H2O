@@ -5,9 +5,9 @@ import DeliveryHomeScreen
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,6 +19,8 @@ import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.h2o.store.Graph.Graph
 import com.h2o.store.Screens.Admin.AddProductScreen
+import com.h2o.store.Screens.Admin.AdminDeliveryConfigScreen
+import com.h2o.store.Screens.Admin.AdminDistrictsScreen
 import com.h2o.store.Screens.Admin.AdminOrderDetailsScreen
 import com.h2o.store.Screens.Admin.EditOrderScreen
 import com.h2o.store.Screens.Admin.EditProductScreen
@@ -37,12 +39,13 @@ import com.h2o.store.Screens.OrderDeliveryScreen
 import com.h2o.store.Screens.ProfileScreen
 import com.h2o.store.Screens.SplashScreen
 import com.h2o.store.Screens.User.CartScreenWrapper
-import com.h2o.store.Screens.User.CheckoutScreenWrapper
+import com.h2o.store.Screens.User.CheckoutScreenCoordinatorWrapper
 import com.h2o.store.Screens.User.HomeScreen
 import com.h2o.store.Screens.User.MapScreen
 import com.h2o.store.Screens.User.MapScreenMode
 import com.h2o.store.Screens.User.OrderDetailsScreen
 import com.h2o.store.Screens.User.OrdersScreen
+import com.h2o.store.Screens.User.PaymentScreenCoordinatorWrapper
 import com.h2o.store.Screens.User.SignUpScreen
 import com.h2o.store.Utils.LocationUtils
 import com.h2o.store.ViewModels.Admin.AdminViewModel
@@ -50,9 +53,11 @@ import com.h2o.store.ViewModels.Admin.ManageOrdersViewModel
 import com.h2o.store.ViewModels.Admin.ManageProductsViewModel
 import com.h2o.store.ViewModels.Admin.ManageUsersViewModel
 import com.h2o.store.ViewModels.Delivery.DeliveryViewModel
+import com.h2o.store.ViewModels.DeliveryConfigViewModel
 import com.h2o.store.ViewModels.InventoryAnalysisViewModel
 import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.ViewModels.User.CartViewModel
+import com.h2o.store.ViewModels.User.CheckoutCoordinatorViewModel
 import com.h2o.store.ViewModels.User.OrdersViewModel
 import com.h2o.store.ViewModels.User.ProductViewModel
 import com.h2o.store.ViewModels.User.ProfileViewModel
@@ -65,9 +70,12 @@ import com.h2o.store.domain.usecases.GetCoordinatesFromAddress
 import com.h2o.store.domain.usecases.GetPlacePredictions
 import com.h2o.store.repositories.Admin.OrderRepository
 import com.h2o.store.repositories.AuthRepository
+import com.h2o.store.repositories.CheckoutRepository
 import com.h2o.store.repositories.InventoryPredictionRepository
 import com.h2o.store.repositories.LocationRepository
+import com.h2o.store.repositories.PaymentRepository
 import com.h2o.store.repositories.ProfileRepository
+import com.h2o.store.repositories.UserRepository
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
@@ -153,11 +161,21 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         ),
         viewModelStoreOwner = viewModelStoreOwner
     )
+    // 2. Create a coordinator ViewModel in the AppNavHost function
+    val checkoutCoordinatorViewModel: CheckoutCoordinatorViewModel = viewModel(
+        factory = CheckoutCoordinatorViewModel.Factory(
+            userId = currentUserId,
+            checkoutRepository = CheckoutRepository(),
+            paymentRepository = PaymentRepository(),
+            userRepository = UserRepository()
+        ),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
 
     val onHelpClick: () -> Unit = {
         // Open phone dialer with the help number
         val intent = Intent(Intent.ACTION_DIAL).apply {
-            data = Uri.parse("tel:+201228279254")
+            data = "tel:+201228279254".toUri()
         }
         context.startActivity(intent)
     }
@@ -169,6 +187,13 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             navController.navigate(Screen.Login.route)
         }
     }
+
+    // DeliveryConfigViewModel creation
+    val deliveryConfigViewModel: DeliveryConfigViewModel = viewModel(
+        factory = DeliveryConfigViewModel.Factory(),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+
 
     // Analytics ViewModel
 
@@ -293,7 +318,7 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 onLogoutClick = onLogoutClick
             )
         }
-
+        // Cart Screen Composable in NavHost
         composable(Screen.Cart.route) {
             // Use the CartScreenWrapper instead of CartScreen
             val currentUser2 = FirebaseAuth.getInstance().currentUser
@@ -314,9 +339,18 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 cartViewModel = cartViewModel
             )
         }
-        // the checkout screen route
+
+        // Checkout Screen Composable in NavHost
+        // 3. Replace the CheckoutScreenWrapper composable with:
         composable(Screen.Checkout.route) {
-            CheckoutScreenWrapper(
+            // Get current user ID from Firebase Auth
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            val userId = currentUser?.uid ?: ""
+
+            // Create CartViewModel for this screen
+            val cartViewModel: CartViewModel = viewModel(factory = CartViewModel.Factory(userId))
+
+            CheckoutScreenCoordinatorWrapper(
                 navController = navController,
                 onPlaceOrder = {
                     // After successful order placement, navigate back to home
@@ -329,7 +363,54 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                     // Go back to cart when back button is pressed
                     navController.popBackStack()
                 },
-                onEditAddress = {navController.navigate(Screen.EditProfile.route)}
+                onEditAddress = {
+                    navController.navigate(Screen.EditProfile.route)
+                },
+                onPaymentProcess = { orderId, totalAmount ->
+                    // Navigate to payment screen with order ID and amount
+                    navController.navigate(
+                        Screen.Payment.createRoute(orderId, totalAmount.toFloat(), true)
+                    )
+                }, cartViewModel = cartViewModel,
+                coordinatorViewModel = checkoutCoordinatorViewModel
+            )
+        }
+        // Payment Screen Composable in NavHost
+        composable(
+            route = Screen.Payment.route,
+            arguments = listOf(
+                navArgument("orderId") {
+                    type = NavType.StringType
+                },
+                navArgument("totalAmount") {
+                    type = NavType.FloatType
+                },
+                navArgument("hasAddress") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            val totalAmount = backStackEntry.arguments?.getFloat("totalAmount")?.toDouble() ?: 0.0
+
+            PaymentScreenCoordinatorWrapper(
+                orderId = orderId,
+                totalAmount = totalAmount,
+                onPaymentSuccess = {
+                    // Navigate to home screen after successful payment
+                    navController.navigate(Screen.Home.route) {
+                        // Clear back stack up to home to prevent going back to payment screen
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
+                onPaymentFailure = {
+                    // Navigate back to checkout screen
+                    navController.popBackStack()
+                } ,
+                onBackClick = {navController.popBackStack()
+                } ,
+                coordinatorViewModel = checkoutCoordinatorViewModel
             )
         }
 
@@ -443,13 +524,13 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 },
                 onViewReports = {
                     navController.navigate(Screen.InventoryAnalysis.route)
-
-                    // This would navigate to a reporting screen when implemented
                 },
                 onLogoutClick = onLogoutClick,
-
                 onOrderSelected = { orderId ->
                     navController.navigate(Screen.AdminOrderDetails.createRoute(orderId))
+                },
+                onManageDeliveryConfig = {
+                    navController.navigate(Screen.DeliveryConfig.route)
                 }
             )
         }
@@ -722,6 +803,32 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 }
             )
         }
+
+
+        // Delivery Config Screen
+        composable(Screen.DeliveryConfig.route) {
+            AdminDeliveryConfigScreen(
+                viewModel = deliveryConfigViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onManageDistricts = {
+                    navController.navigate(Screen.ManageDistricts.route)
+                }
+            )
+        }
+
+// Manage Districts Screen
+        composable(Screen.ManageDistricts.route) {
+            AdminDistrictsScreen(
+                viewModel = deliveryConfigViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
     }
 }
 

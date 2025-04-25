@@ -55,6 +55,10 @@ class SignUpViewModel(private val authRepository: AuthRepository) : ViewModel() 
     private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
     val signUpState = _signUpState.asStateFlow()
 
+    // Add after other private val declarations
+    private val _accountType = MutableStateFlow("Home") // Default to "Home"
+    val accountType = _accountType.asStateFlow()
+
     fun onNameChanged(newName: String) { _name.value = newName }
     fun onPhoneChanged(newPhone: String) { _phone.value = newPhone }
     fun onEmailChanged(newEmail: String) { _email.value = newEmail }
@@ -62,7 +66,8 @@ class SignUpViewModel(private val authRepository: AuthRepository) : ViewModel() 
     fun onDistrictChanged(newDistrict: String) { _district.value = newDistrict }
     fun onAddressChanged(newAddress: LatLng) { _address.value = newAddress }
     fun onPasswordChanged(newPassword: String) { _password.value = newPassword }
-
+    // Add after other onXChanged functions
+    fun onAccountTypeChanged(newAccountType: String) { _accountType.value = newAccountType }
     // New methods for location and address data
     fun updateLocationAndAddress(locationData: LocationData, addressData: AddressData) {
         _locationData.value = locationData
@@ -140,6 +145,8 @@ class SignUpViewModel(private val authRepository: AuthRepository) : ViewModel() 
             district = _district.value,
             locationData = locationData,
             addressData = addressData,
+            accountType = _accountType.value, // Add this parameter
+
             onResult = { success, error ->
                 if (success) {
                     _signUpState.value = SignUpState.Success

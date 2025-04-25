@@ -26,6 +26,7 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
         _password.value = newPassword
     }
 
+    // Update the login method in LoginViewModel.kt:
     fun login() {
         if (_email.value.isEmpty() || _password.value.isEmpty()) {
             _loginState.value = LoginState.Error("Email and password cannot be empty.")
@@ -34,14 +35,19 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
         _loginState.value = LoginState.Loading
 
-        // Call Firebase Authentication with the updated API
-        authRepository.loginUser(_email.value, _password.value) { result ->
-            if (result.success) {
-                // Set the login state with the role information
-                _loginState.value = LoginState.Success(result.role ?: "user")
-            } else {
-                _loginState.value = LoginState.Error(result.errorMessage ?: "Login failed.")
+        try {
+            // Call Firebase Authentication with the updated API
+            authRepository.loginUser(_email.value, _password.value) { result ->
+                if (result.success) {
+                    // Set the login state with the role information
+                    _loginState.value = LoginState.Success(result.role ?: "user")
+                } else {
+                    _loginState.value = LoginState.Error(result.errorMessage ?: "Login failed.")
+                }
             }
+        } catch (e: Exception) {
+            // Handle any unexpected exceptions
+            _loginState.value = LoginState.Error("Login error: ${e.message}")
         }
     }
 

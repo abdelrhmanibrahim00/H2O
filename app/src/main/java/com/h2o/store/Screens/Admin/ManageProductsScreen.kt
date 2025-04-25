@@ -12,14 +12,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +39,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -61,7 +66,7 @@ fun ManageProductsScreen(
     viewModel: ManageProductsViewModel,
     onProductDetails: (String) -> Unit,
     onBackClick: () -> Unit,
-    onAddProduct: () -> Unit = {} // New parameter for handling add product action
+    onAddProduct: () -> Unit = {} // Parameter for handling add product action
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
@@ -70,6 +75,9 @@ fun ManageProductsScreen(
     val allProducts by viewModel.allProducts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+
+    // Grid state to track scrolling
+    val gridState = rememberLazyGridState()
 
     // Effect to fetch products when the screen is shown
     LaunchedEffect(key1 = true) {
@@ -83,6 +91,12 @@ fun ManageProductsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    // Add refresh action
+                    IconButton(onClick = { viewModel.refreshData() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 }
             )
@@ -145,7 +159,7 @@ fun ManageProductsScreen(
             }
 
             // Show loading indicator
-            if (isLoading) {
+            if (isLoading && allProducts.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -185,20 +199,80 @@ fun ManageProductsScreen(
                 }
             } else {
                 // Show products grid
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(allProducts) { product ->
-                        ProductCard(
-                            product = product,
-                            currencyFormat = currencyFormat,
-                            onCardClick = { onProductDetails(product.id) }
-                        )
+                ProductGrid(
+                    products = allProducts,
+                    currencyFormat = currencyFormat,
+                    onProductClick = onProductDetails,
+                    gridState = gridState,
+                    onLoadMore = {
+                        viewModel.loadMoreProducts()
                     }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ProductGrid(
+    products: List<Product>,
+    currencyFormat: NumberFormat,
+    onProductClick: (String) -> Unit,
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    onLoadMore: () -> Unit = {} // Add load more callback
+) {
+    // Track if we need to load more when reaching the end
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = gridState.layoutInfo.totalItemsCount
+
+            lastVisibleItem >= totalItems - 4 // Load more when 4 items from end
+        }
+    }
+
+    // Effect to trigger load more when needed
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && products.isNotEmpty()) {
+            onLoadMore()
+        }
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 160.dp),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize(),
+        state = gridState
+    ) {
+        // Use itemsIndexed with explicit key parameter instead of items
+        itemsIndexed(
+            items = products,
+            // Use BOTH the product ID and index as the key to ensure uniqueness
+            key = { index, product -> "${product.id}_$index" }
+        ) { _, product ->
+            ProductCard(
+                product = product,
+                currencyFormat = currencyFormat,
+                onCardClick = { onProductClick(product.id) }
+            )
+        }
+
+        // Show loading indicator at the bottom
+        if (products.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(50.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(30.dp),
+                        strokeWidth = 2.dp
+                    )
                 }
             }
         }
@@ -228,6 +302,7 @@ fun ProductCard(
                     .height(120.dp)
             ) {
                 if (product.imageUrl.isNotEmpty()) {
+                    // Simple version that won't crash
                     AsyncImage(
                         model = product.imageUrl,
                         contentDescription = product.name,
@@ -315,7 +390,7 @@ fun ProductCard(
                             Text(
                                 text = currencyFormat.format(product.price),
                                 style = MaterialTheme.typography.bodySmall,
-                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                textDecoration = TextDecoration.LineThrough
                             )
                         }
                     } else {

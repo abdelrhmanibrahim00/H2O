@@ -14,24 +14,61 @@ class ProductRepository {
     private val productsCollection = firestore.collection("products")
     private val TAG = "ProductRepository"
 
+    // Simple in-memory cache to improve performance
+    private var productsCache: List<Product> = emptyList()
+    private var lastCacheTime: Long = 0
+
     // Get all products (regular method)
     suspend fun getProducts(): List<Product> {
         return try {
-            val snapshot = productsCollection.get().await()
-            snapshot.documents.mapNotNull { document ->
-                document.toObject(Product::class.java)?.copy(id = document.id)
+            // Use cache if it's recent (less than 5 minutes old)
+            val cacheAge = System.currentTimeMillis() - lastCacheTime
+            if (productsCache.isNotEmpty() && cacheAge < 5 * 60 * 1000) {
+                Log.d(TAG, "Using cached products (${productsCache.size} items)")
+                return productsCache
             }
+
+            val snapshot = productsCollection.get().await()
+            val products = snapshot.documents.mapNotNull { document ->
+                try {
+                    document.toObject(Product::class.java)?.copy(id = document.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error converting document ${document.id}: ${e.message}")
+                    null
+                }
+            }
+
+            // Update cache
+            productsCache = products
+            lastCacheTime = System.currentTimeMillis()
+            Log.d(TAG, "Fetched ${products.size} products from Firestore")
+
+            products
         } catch (e: Exception) {
-            throw e
+            Log.e(TAG, "Error fetching products: ${e.message}")
+            // Return cache if available, otherwise throw
+            if (productsCache.isNotEmpty()) {
+                Log.d(TAG, "Returning cached products after error")
+                productsCache
+            } else {
+                throw e
+            }
         }
     }
 
     // Get product by ID
     suspend fun getProductById(productId: String): Product? {
         return try {
+            // Check cache first
+            productsCache.find { it.id == productId }?.let {
+                Log.d(TAG, "Found product $productId in cache")
+                return it
+            }
+
             val document = productsCollection.document(productId).get().await()
             document.toObject(Product::class.java)?.copy(id = document.id)
         } catch (e: Exception) {
+            Log.e(TAG, "Error fetching product by ID: ${e.message}")
             throw e
         }
     }
@@ -39,6 +76,11 @@ class ProductRepository {
     // Get all products as a Flow (for admin purposes)
     fun getAllProductsFlow(): Flow<List<Product>> = callbackFlow {
         Log.d(TAG, "Starting real-time listener for ALL products")
+
+        // Send cached data immediately if available
+        if (productsCache.isNotEmpty()) {
+            trySend(productsCache)
+        }
 
         // Query all products and sort by name
         val query = productsCollection
@@ -62,6 +104,10 @@ class ProductRepository {
                         }
                     }
 
+                    // Update cache
+                    productsCache = products
+                    lastCacheTime = System.currentTimeMillis()
+
                     Log.d(TAG, "Real-time update: ${products.size} total products")
                     trySend(products)
                 } catch (e: Exception) {
@@ -74,6 +120,42 @@ class ProductRepository {
         awaitClose {
             Log.d(TAG, "Removing all products listener")
             listenerRegistration.remove()
+        }
+    }
+
+    // Get paginated products (to fix the duplicate key issue)
+    suspend fun getPaginatedProducts(lastProductId: String? = null, pageSize: Int = 10): List<Product> {
+        return try {
+            val startTime = System.currentTimeMillis()
+
+            // Build query with pagination
+            var query = productsCollection
+                .orderBy("name", Query.Direction.ASCENDING)
+                .limit(pageSize.toLong())
+
+            // If we have a last document ID, fetch that document and use it as starting point
+            if (lastProductId != null) {
+                val lastDocSnapshot = productsCollection.document(lastProductId).get().await()
+                if (lastDocSnapshot.exists()) {
+                    query = query.startAfter(lastDocSnapshot)
+                }
+            }
+
+            val snapshot = query.get().await()
+            val products = snapshot.documents.mapNotNull { document ->
+                try {
+                    document.toObject(Product::class.java)?.copy(id = document.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error converting document ${document.id}: ${e.message}")
+                    null
+                }
+            }
+
+            Log.d(TAG, "Paginated products fetch took ${System.currentTimeMillis() - startTime}ms")
+            products
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching paginated products: ${e.message}")
+            emptyList() // Return empty list on error to prevent crashes
         }
     }
 
@@ -96,13 +178,20 @@ class ProductRepository {
                 "featured" to product.featured,
                 "rating" to product.rating,
                 "quantity" to product.quantity
-
             )
 
             // Perform the update
             productsCollection.document(product.id)
                 .update(updates)
                 .await()
+
+            // Update in cache if present
+            val cacheIndex = productsCache.indexOfFirst { it.id == product.id }
+            if (cacheIndex >= 0) {
+                val updatedCache = productsCache.toMutableList()
+                updatedCache[cacheIndex] = product
+                productsCache = updatedCache
+            }
 
             // Log success
             Log.d(TAG, "Product successfully updated: ${product.id}")
@@ -139,6 +228,13 @@ class ProductRepository {
             val documentRef = productsCollection.add(productMap).await()
             val newProductId = documentRef.id
 
+            // Add to cache if we have one
+            if (productsCache.isNotEmpty()) {
+                val newProduct = product.copy(id = newProductId)
+                productsCache = productsCache + newProduct
+                lastCacheTime = System.currentTimeMillis()
+            }
+
             Log.d(TAG, "New product added with ID: $newProductId")
             newProductId
         } catch (e: Exception) {
@@ -152,11 +248,25 @@ class ProductRepository {
         return try {
             Log.d(TAG, "Deleting product: $productId")
             productsCollection.document(productId).delete().await()
+
+            // Remove from cache if present
+            if (productsCache.any { it.id == productId }) {
+                productsCache = productsCache.filter { it.id != productId }
+                lastCacheTime = System.currentTimeMillis()
+            }
+
             Log.d(TAG, "Product successfully deleted: $productId")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting product: ${e.message}")
             false
         }
+    }
+
+    // Clear cache
+    fun clearCache() {
+        productsCache = emptyList()
+        lastCacheTime = 0
+        Log.d(TAG, "Product cache cleared")
     }
 }

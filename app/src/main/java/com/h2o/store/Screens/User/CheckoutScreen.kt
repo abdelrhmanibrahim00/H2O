@@ -55,58 +55,26 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.google.firebase.auth.FirebaseAuth
 import com.h2o.store.ViewModels.User.CartViewModel
-import com.h2o.store.ViewModels.User.CheckoutViewModel
+import com.h2o.store.ViewModels.User.CheckoutCoordinatorViewModel
 import com.h2o.store.data.Cart.CartItem
 import com.h2o.store.data.User.UserData
 import kotlinx.coroutines.launch
 
-// Wrapper composable that initializes the CartViewModel with the current user ID
-@Composable
-fun CheckoutScreenWrapper(
-    navController: NavController,
-    onPlaceOrder: () -> Unit,
-    onBackClick: () -> Unit,
-    onEditAddress: () -> Unit
-) {
-    // Get current user ID from Firebase Auth
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    val userId = currentUser?.uid ?: ""
-
-    // Create user-specific CartViewModel using the Factory
-    val cartViewModel: CartViewModel = viewModel(
-        factory = CartViewModel.Factory(userId)
-    )
-
-    // Create CheckoutViewModel as well
-    val checkoutViewModel: CheckoutViewModel = viewModel(
-        factory = CheckoutViewModel.Factory(userId)
-    )
-
-    // Use the CheckoutScreen composable
-    CheckoutScreen(
-        navController = navController,
-        cartViewModel = cartViewModel,
-        checkoutViewModel = checkoutViewModel,
-        onPlaceOrder = onPlaceOrder,
-        onBackClick = onBackClick,
-        onEditAddress = onEditAddress
-    )
-}
-
+/**
+ * Checkout screen using the coordinator pattern for better data sharing
+ * and state management between checkout and payment processes.
+ */
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun CheckoutScreen(
-    navController: NavController,
+fun CheckoutScreenWithCoordinator(
     cartViewModel: CartViewModel,
-    checkoutViewModel: CheckoutViewModel,
+    coordinatorViewModel: CheckoutCoordinatorViewModel,
     onPlaceOrder: () -> Unit,
     onBackClick: () -> Unit,
-    onEditAddress: () -> Unit
+    onEditAddress: () -> Unit,
+    onPaymentProcess: (Double) -> Unit
 ) {
     // Initialize scaffold state
     val scaffoldState = rememberScaffoldState()
@@ -121,19 +89,31 @@ fun CheckoutScreen(
     val cartItems by cartViewModel.cartItems.collectAsState()
     val totalPrice by cartViewModel.totalPrice.collectAsState()
 
-    // Checkout state
-    val isProcessing by checkoutViewModel.isProcessing.collectAsState()
-    val orderSuccess by checkoutViewModel.orderSuccess.collectAsState()
-    val error by checkoutViewModel.error.collectAsState()
+    // Checkout state from coordinator
+    val isProcessing by coordinatorViewModel.isProcessing.collectAsState()
+    val orderSuccess by coordinatorViewModel.orderSuccess.collectAsState()
+    val error by coordinatorViewModel.error.collectAsState()
 
-    // Address state
-    val userAddress by checkoutViewModel.userData.collectAsState()
-    val isAddressLoading by checkoutViewModel.isUserDataLoading.collectAsState()
+    // Address state from coordinator
+    val userData by coordinatorViewModel.userData.collectAsState()
+    val isAddressLoading by coordinatorViewModel.isUserDataLoading.collectAsState()
+
+    // Monitor payment state
+    val paymentState by coordinatorViewModel.paymentState.collectAsState()
 
     // Monitor for order success and trigger navigation if needed
     LaunchedEffect(orderSuccess) {
         if (orderSuccess) {
             onPlaceOrder()
+        }
+    }
+
+    // Show errors in snackbar
+    LaunchedEffect(error) {
+        error?.let {
+            scope.launch {
+                scaffoldState.snackbarHostState.showSnackbar(it)
+            }
         }
     }
 
@@ -199,33 +179,65 @@ fun CheckoutScreen(
                 cartItems = cartItems,
                 totalPrice = totalPrice.toDouble(),
                 isProcessing = isProcessing,
-                userAddress = userAddress,
+                userData = userData,
                 isAddressLoading = isAddressLoading,
                 onEditAddress = onEditAddress,
                 onPlaceOrder = { paymentMethod ->
-                    checkoutViewModel.placeOrder(
-                        cartItems = cartItems,
-                        totalAmount = totalPrice.toDouble(),
-                        paymentMethod = paymentMethod
-                    )
+                    // Process order through coordinator
+                    when (paymentMethod) {
+                        "Cash on Delivery" -> {
+                            coordinatorViewModel.placeOrder(
+                                cartItems = cartItems,
+                                totalAmount = totalPrice.toDouble(),
+                                paymentMethod = paymentMethod
+                            )
+                        }
+                        "Credit Card" -> {
+                            // Check if user has a valid address
+                            if (coordinatorViewModel.hasValidAddress()) {
+                                // Pass control to payment process
+                                onPaymentProcess(totalPrice.toDouble())
+                            } else {
+                                // Error will be shown via state flow
+                                coordinatorViewModel.placeOrder(
+                                    cartItems = cartItems,
+                                    totalAmount = totalPrice.toDouble(),
+                                    paymentMethod = paymentMethod
+                                )
+                            }
+                        }
+                        else -> {
+                            // Handle other payment methods
+                            coordinatorViewModel.placeOrder(
+                                cartItems = cartItems,
+                                totalAmount = totalPrice.toDouble(),
+                                paymentMethod = paymentMethod
+                            )
+                        }
+                    }
                 },
                 error = error,
+                hasValidAddress = coordinatorViewModel.hasValidAddress(),
                 paddingValues = paddingValues
             )
         }
     }
 }
 
+/**
+ * Modified CheckoutContent to work with coordinator pattern
+ */
 @Composable
 fun CheckoutContent(
     cartItems: List<CartItem>,
     totalPrice: Double,
     isProcessing: Boolean,
-    userAddress: UserData?,
+    userData: UserData?,
     isAddressLoading: Boolean,
     onEditAddress: () -> Unit,
     onPlaceOrder: (String) -> Unit,
     error: String?,
+    hasValidAddress: Boolean,
     paddingValues: PaddingValues
 ) {
     // State for selected payment method
@@ -302,7 +314,7 @@ fun CheckoutContent(
                                     .align(Alignment.Center)
                             )
                         }
-                        userAddress == null -> {
+                        userData?.address == null -> {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     "No shipping address found",
@@ -321,10 +333,10 @@ fun CheckoutContent(
                         }
                         else -> {
                             Column {
-                                userAddress.address?.formattedAddress?.let {
+                                userData.address.formattedAddress.let {
                                     Text(
                                         text = it.ifEmpty {
-                                            "${userAddress.address.street}, ${userAddress.address.city}, ${userAddress.address.state}, ${userAddress.address.country} ${userAddress.address.postalCode}"
+                                            "${userData.address.street}, ${userData.address.city}, ${userData.address.state}, ${userData.address.country} ${userData.address.postalCode}"
                                         },
                                         style = MaterialTheme.typography.body1
                                     )
@@ -374,16 +386,6 @@ fun CheckoutContent(
             }
 
             Spacer(modifier = Modifier.weight(0.1f))
-
-            // Error message if any
-            error?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colors.error,
-                    style = MaterialTheme.typography.caption,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
 
             // Order total and place order button
             Card(
@@ -447,7 +449,7 @@ fun CheckoutContent(
 
                     Button(
                         onClick = { onPlaceOrder(selectedPayment) },
-                        enabled = !isProcessing && userAddress != null,
+                        enabled = !isProcessing && (hasValidAddress || selectedPayment != "Credit Card"),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (isProcessing) {
@@ -464,7 +466,6 @@ fun CheckoutContent(
         }
     }
 }
-
 @Composable
 private fun CheckoutItemCard(
     cartItem: CartItem
@@ -516,6 +517,6 @@ private fun CheckoutItemCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            }
         }
     }
+}

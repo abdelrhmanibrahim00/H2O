@@ -143,6 +143,9 @@ dependencies {
     // WebView for payment gateway
     implementation ("androidx.webkit:webkit:1.6.0")
 
+    // Gson for JSON serialization/deserialization
+    implementation ("com.google.code.gson:gson:2.10.1")
+
     // Update to the latest versions
 //    implementation ("com.google.android.gms:play-services-auth:20.7.0")
 //    implementation ("com.google.firebase:firebase-auth:22.3.0")

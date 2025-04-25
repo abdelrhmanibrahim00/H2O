@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -61,9 +62,9 @@ fun AdminHomeScreen(
     onManageOrders: () -> Unit,
     onManageUsers: () -> Unit,
     onViewReports: () -> Unit,
-    onLogoutClick: () -> Unit ,
-    onOrderSelected: (String) -> Unit  // Add this callback for order selection
-
+    onLogoutClick: () -> Unit,
+    onOrderSelected: (String) -> Unit,
+    onManageDeliveryConfig: () -> Unit
 ) {
     // Collect state from ViewModel
     val orders by adminViewModel.orders.collectAsState()
@@ -244,6 +245,12 @@ fun AdminHomeScreen(
                         title = "View Reports",
                         icon = Icons.Default.BarChart,
                         onClick = onViewReports
+                    ),
+                    // Add new dashboard item for delivery configuration
+                    AdminDashboardItem(
+                        title = "Delivery Configuration",
+                        icon = Icons.Default.LocalShipping,
+                        onClick = onManageDeliveryConfig
                     )
                 )
 
@@ -325,5 +332,3 @@ fun AdminDashboardGrid(items: List<AdminDashboardItem>) {
         }
     }
 }
-
-

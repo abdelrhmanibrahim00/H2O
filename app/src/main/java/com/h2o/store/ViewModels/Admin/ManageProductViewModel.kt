@@ -40,12 +40,22 @@ class ManageProductsViewModel(
     private val _deleteProductResult = MutableStateFlow<Boolean?>(null)
     val deleteProductResult: StateFlow<Boolean?> = _deleteProductResult
 
+    // Track loaded product IDs to prevent duplicates
+    private val loadedProductIds = mutableSetOf<String>()
+    private var lastLoadedId: String? = null
+    private var isLoadingMore = false
+
     private val TAG = "ManageProductsViewModel"
 
     // Fetch all products
     fun fetchAllProducts() {
         _isLoading.value = true
         _errorMessage.value = null
+
+        // Reset pagination state
+        loadedProductIds.clear()
+        lastLoadedId = null
+        isLoadingMore = false
 
         viewModelScope.launch {
             try {
@@ -56,6 +66,10 @@ class ManageProductsViewModel(
                         _isLoading.value = false
                     }
                     .collectLatest { products ->
+                        // Update loaded IDs to prevent duplicates
+                        loadedProductIds.clear()
+                        loadedProductIds.addAll(products.map { it.id })
+
                         _allProducts.value = products
                         _isLoading.value = false
                     }
@@ -63,6 +77,56 @@ class ManageProductsViewModel(
                 Log.e(TAG, "Exception in fetchAllProducts: ${e.message}")
                 _errorMessage.value = "Failed to load products: ${e.message}"
                 _isLoading.value = false
+            }
+        }
+    }
+
+    // Load more products (pagination)
+    fun loadMoreProducts() {
+        // Prevent multiple simultaneous pagination requests
+        if (isLoadingMore || _isLoading.value) return
+
+        isLoadingMore = true
+
+        viewModelScope.launch {
+            try {
+                // Get the current products
+                val currentProducts = _allProducts.value
+
+                // If we have no products yet, do a regular fetch
+                if (currentProducts.isEmpty()) {
+                    isLoadingMore = false
+                    fetchAllProducts()
+                    return@launch
+                }
+
+                // Get the last product ID for pagination
+                val lastId = lastLoadedId ?: currentProducts.lastOrNull()?.id
+
+                // Fetch the next page
+                val nextPage = productRepository.getPaginatedProducts(lastId, 20)
+
+                // Filter out any products we already have (to avoid duplicate keys)
+                val newProducts = nextPage.filter { newProduct ->
+                    !loadedProductIds.contains(newProduct.id)
+                }
+
+                // Update the last loaded ID
+                if (newProducts.isNotEmpty()) {
+                    lastLoadedId = newProducts.last().id
+
+                    // Add new product IDs to our tracking set
+                    loadedProductIds.addAll(newProducts.map { it.id })
+
+                    // Append new products to the list
+                    _allProducts.value = currentProducts + newProducts
+                }
+
+                isLoadingMore = false
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading more products: ${e.message}")
+                _errorMessage.value = "Error loading more products: ${e.message}"
+                isLoadingMore = false
             }
         }
     }
@@ -93,7 +157,10 @@ class ManageProductsViewModel(
                     Log.d(TAG, "Successfully added product with ID: $newProductId")
                     _addProductResult.value = true
 
-                    // Refresh the product list
+                    // Add to loaded IDs to prevent duplicates
+                    loadedProductIds.add(newProductId)
+
+                    // Refresh the product list but maintain pagination state
                     fetchAllProducts()
                 } else {
                     Log.e(TAG, "Failed to add product, no ID returned")
@@ -126,8 +193,11 @@ class ManageProductsViewModel(
                     Log.d(TAG, "Successfully deleted product: $productId")
                     _deleteProductResult.value = true
 
-                    // Refresh the product list
-                    fetchAllProducts()
+                    // Remove from loaded IDs
+                    loadedProductIds.remove(productId)
+
+                    // Update allProducts directly to avoid a full refresh
+                    _allProducts.value = _allProducts.value.filter { it.id != productId }
                 } else {
                     Log.e(TAG, "Failed to delete product: $productId")
                     _errorMessage.value = "Failed to delete product"
@@ -205,6 +275,11 @@ class ManageProductsViewModel(
 
                 if (success) {
                     Log.d(TAG, "Successfully updated product ${product.id}")
+
+                    // Update the product in the list without a full refresh
+                    _allProducts.value = _allProducts.value.map {
+                        if (it.id == product.id) product else it
+                    }
                 } else {
                     _errorMessage.value = "Failed to update product"
                     Log.e(TAG, "Failed to update product ${product.id}")
@@ -263,6 +338,14 @@ class ManageProductsViewModel(
     // Reset delete result state
     fun resetDeleteProductResult() {
         _deleteProductResult.value = null
+    }
+
+    // Refresh data (clear cache and fetch fresh data)
+    fun refreshData() {
+        productRepository.clearCache()
+        loadedProductIds.clear()
+        lastLoadedId = null
+        fetchAllProducts()
     }
 
     // Factory for creating this ViewModel with dependencies

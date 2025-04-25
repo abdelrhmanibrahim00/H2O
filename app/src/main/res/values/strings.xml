@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">H2O</string>
+    <string name="district_info">Enter the district or neighborhood within Alexandria where you are located.</string>
+    <string name="account_type_info">Home accounts are for individual users. Market accounts are for businesses and retailers.</string>
 </resources>

@@ -24,7 +24,10 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,12 +53,14 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.h2o.store.Navigation.Screen
+import com.h2o.store.R
 import com.h2o.store.Utils.LocationUtils
 import com.h2o.store.ViewModels.Location.LocationLoadingState
 import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.ViewModels.User.SignUpViewModel
 import com.h2o.store.ViewModels.User.SignUpViewModel.SignUpState
 import com.h2o.store.repositories.AuthRepository
+import com.h2o.store.reusableComposable.InfoIcon
 import com.h2o.store.reusableComposable.PasswordTextField
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,6 +84,8 @@ fun SignUpScreen(
     val addressData by viewModel.addressData.collectAsState()
     val locationData by viewModel.locationData.collectAsState()
     val signUpState by viewModel.signUpState.collectAsState()
+    val accountType by viewModel.accountType.collectAsState()
+
 
     val userLocation by locationViewModel.location.collectAsState()
     val structuredAddress by locationViewModel.structuredAddress.collectAsState()
@@ -246,17 +253,34 @@ fun SignUpScreen(
 
                 // District
                 item {
-                    OutlinedTextField(
-                        value = district,
-                        onValueChange = { viewModel.onDistrictChanged(it) },
-                        label = { Text("District") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                    Text(
+                        text = "District",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
                     )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = district,
+                            onValueChange = { viewModel.onDistrictChanged(it) },
+                            label = { Text("District") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+
+                        Box(modifier = Modifier.padding(start = 8.dp)) {
+                            InfoIcon(infoTextResourceId = R.string.district_info)
+                        }
+                    }
                 }
 
-                // Address Section with Navigation & Permission Handling
-                // Replace the current loading UI in the SignUpScreen's item block
+
+
 // for the Address Section with this improved version
 
                 item {
@@ -356,6 +380,62 @@ fun SignUpScreen(
                                     tint = Color.DarkGray
                                 )
                             }
+                        }
+                    }
+                }
+
+                // Account Type dropdown with properly aligned info icon
+                item {
+
+                    var expanded by remember { mutableStateOf(false) }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = it },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            OutlinedTextField(
+                                value = accountType,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Account Type") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                },
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor()
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier.exposedDropdownSize()
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Home") },
+                                    onClick = {
+                                        viewModel.onAccountTypeChanged("Home")
+                                        expanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Market") },
+                                    onClick = {
+                                        viewModel.onAccountTypeChanged("Market")
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+
+                        // Info icon aligned to the right
+                        Box(modifier = Modifier.padding(start = 8.dp)) {
+                            InfoIcon(infoTextResourceId = R.string.account_type_info)
                         }
                     }
                 }

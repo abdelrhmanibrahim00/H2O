@@ -31,6 +31,12 @@ sealed class Screen(val title: String = "", val route: String) {
     object OrderConfirmation : Screen(title = "Order Confirmation", route = "order_confirmation/{orderId}") {
         fun createRoute(orderId: String) = "order_confirmation/$orderId"
     }
+    // Add payment screen route
+    object Payment : Screen(route ="payment/{orderId}/{totalAmount}/{hasAddress}") {
+        fun createRoute(orderId: String, totalAmount: Float, hasAddress: Boolean): String {
+            return "payment/$orderId/$totalAmount/$hasAddress"
+        }
+    }
 
     // Admin management screens
     object ManageOrders : Screen(route="manage_orders_screen")
@@ -84,6 +90,11 @@ sealed class Screen(val title: String = "", val route: String) {
 
     object InventoryAnalysis : Screen(route="inventory_analysis_screen")
     object InventoryReportDetail : Screen(route="inventory_report_detail")
+
+
+    // Add right after InventoryAnalysis and InventoryReportDetail objects
+    object DeliveryConfig : Screen(title = "Delivery Configuration", route = "delivery_config")
+    object ManageDistricts : Screen(title = "Manage Districts", route = "manage_districts")
 
 
 

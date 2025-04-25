@@ -25,6 +25,17 @@ class AuthRepository {
     fun loginUser(email: String, password: String, onResult: (LoginResult) -> Unit) {
         Log.d(TAG, "Attempting login with email: $email")
 
+        // First check if a user is already logged in
+        val currentUser = firebaseAuth.currentUser
+        if (currentUser != null && currentUser.email == email) {
+            // User is already logged in, just check their role
+            fetchUserRole(currentUser.uid) { exists, role ->
+                onResult(LoginResult(true, null, role ?: "user"))
+            }
+            return
+        }
+
+        // Proceed with normal login flow if not already logged in
         firebaseAuth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener { authResult ->
                 val user = authResult.user
@@ -34,44 +45,34 @@ class AuthRepository {
                     return@addOnSuccessListener
                 }
 
-                // Force token refresh to ensure fresh credentials
-                user.getIdToken(true)
-                    .addOnSuccessListener { tokenResult ->
-                        Log.d(TAG, "Successfully refreshed auth token")
+                // Check if email verification is required
+                if (!user.isEmailVerified) {
+                    Log.d(TAG, "User email is not verified")
 
-                        // Check if email verification is required
-                        if (!user.isEmailVerified) {
-                            Log.d(TAG, "User email is not verified")
-
-                            // Send a new verification email
-                            user.sendEmailVerification()
-                                .addOnSuccessListener {
-                                    Log.d(TAG, "New verification email sent")
-                                }
-
-                            // Sign out the user
-                            firebaseAuth.signOut()
-                            onResult(LoginResult(false, "Please verify your email before logging in. A new verification email has been sent."))
-                            return@addOnSuccessListener
+                    // Send a new verification email
+                    user.sendEmailVerification()
+                        .addOnSuccessListener {
+                            Log.d(TAG, "New verification email sent")
                         }
 
-                        // Check user document and fetch role
-                        fetchUserRole(user.uid) { exists, role ->
-                            if (!exists) {
-                                // Create a basic user document if it doesn't exist
-                                createBasicUserDocument(user.uid, user.email ?: "")
-                                // Default role is "user" for newly created documents
-                                onResult(LoginResult(true, null, "user"))
-                            } else {
-                                // Return the role with the success result
-                                onResult(LoginResult(true, null, role))
-                            }
-                        }
+                    // Sign out the user
+                    firebaseAuth.signOut()
+                    onResult(LoginResult(false, "Please verify your email before logging in. A new verification email has been sent."))
+                    return@addOnSuccessListener
+                }
+
+                // Check user document and fetch role
+                fetchUserRole(user.uid) { exists, role ->
+                    if (!exists) {
+                        // Create a basic user document if it doesn't exist
+                        createBasicUserDocument(user.uid, user.email ?: "")
+                        // Default role is "user" for newly created documents
+                        onResult(LoginResult(true, null, "user"))
+                    } else {
+                        // Return the role with the success result
+                        onResult(LoginResult(true, null, role))
                     }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Token refresh failed: ${e.message}")
-                        onResult(LoginResult(false, "Authentication session error. Please try again."))
-                    }
+                }
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Login failed: ${e.message}")
@@ -107,6 +108,7 @@ class AuthRepository {
         district: String,
         locationData: LocationData,
         addressData: AddressData,
+        accountType: String, // Add this parameter
         onResult: (Boolean, String?) -> Unit
     ) {
         // Log authentication state before starting
@@ -170,7 +172,9 @@ class AuthRepository {
                             "location" to locationMap,        // Geolocation data
                             "address" to addressMap,          // Structured address data
                             "created_at" to FieldValue.serverTimestamp(),
-                            "Role" to "user"
+                            "Role" to "user" ,
+                            "accountType" to accountType // Add this line
+
                         )
 
                         Log.d(TAG, "Writing user data to Firestore, uid: ${user.uid}")
@@ -215,18 +219,34 @@ class AuthRepository {
             }
     }
 
-        fun logoutUser(onComplete: () -> Unit) {
-            try {
-                Log.d(TAG, "Logging out user: ${firebaseAuth.currentUser?.email}")
-                firebaseAuth.signOut()
-                Log.d(TAG, "User logged out successfully")
+    // Enhance the logout method in AuthRepository.kt:
+    fun logoutUser(onComplete: () -> Unit) {
+        try {
+            val currentUser = firebaseAuth.currentUser
+            if (currentUser == null) {
+                Log.d(TAG, "No user to log out")
                 onComplete()
-            } catch (e: Exception) {
-                Log.e(TAG, "Error during logout: ${e.message}")
-                // Still call onComplete even if there's an error to ensure UI updates
-                onComplete()
+                return
             }
+
+            Log.d(TAG, "Logging out user: ${currentUser.email}")
+
+            // Clear any cached data first
+            // Add memory cleanup here if needed
+
+            firebaseAuth.signOut()
+            Log.d(TAG, "User logged out successfully")
+
+            // Ensure we wait a moment before completing to allow Firebase to process
+            // the signout request completely
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                onComplete()
+            }, 300) // Small delay to ensure Firebase completes the process
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during logout: ${e.message}")
+            onComplete()
         }
+    }
 
     // New helper method to check if a user document exists
     private fun checkUserDocument(userId: String, onResult: (Boolean) -> Unit) {
@@ -273,7 +293,9 @@ class AuthRepository {
             "city" to "",
             "district" to "",
             "created_at" to FieldValue.serverTimestamp(),
-            "Role" to "user"  // Default role is "user"
+            "Role" to "user" , // Default role is "user"
+            "accountType" to "Home"  // Add default account type
+
         )
 
         Log.d(TAG, "Creating basic user document for ID: $userId")
