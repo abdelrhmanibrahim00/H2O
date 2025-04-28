@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">H2O</string>
+
+    <string name="district_info">أدخل الحي أو المنطقة التي تتواجد فيها في الإسكندرية.</string>
+    <string name="account_type_info">حسابات المنزل هي للمستخدمين الأفراد. حسابات السوق هي للشركات وتجار التجزئة.</string>
+
+    <string name="signup_title">إنشاء حساب</string>
+    <string name="signup_name">الاسم</string>
+    <string name="signup_email">البريد الإلكتروني</string>
+    <string name="signup_password">كلمة المرور</string>
+    <string name="signup_city">المدينة</string>
+    <string name="signup_district">الحي</string>
+    <string name="signup_alexandria">الإسكندرية</string>
+    <string name="signup_select_address">اختر العنوان</string>
+    <string name="signup_getting_location">جارٍ تحديد الموقع...</string>
+    <string name="signup_skip">تخطي</string>
+    <string name="signup_account_type">نوع الحساب</string>
+    <string name="signup_account_home">منزل</string>
+    <string name="signup_account_market">سوق</string>
+    <string name="signup_phone">رقم الهاتف</string>
+    <string name="signup_whatsapp">رقم الواتساب (اختياري)</string>
+    <string name="signup_button">إنشاء حساب</string>
+    <string name="signup_login_prompt">لديك حساب بالفعل؟ تسجيل الدخول</string>
+    <string name="signup_success">تم إنشاء الحساب بنجاح!</string>
+    <string name="signup_location_permission_required">إذن الموقع مطلوب</string>
+    <string name="signup_location_permission_settings">قم بتمكين إذن الموقع في الإعدادات</string>
+    <string name="signup_location_error">خطأ في الحصول على الموقع. الرجاء المحاولة مرة أخرى.</string>
+
+    <string name="error_name">أدخل اسمًا صالحًا.</string>
+    <string name="error_phone">أدخل رقم هاتف صالح يبدأ بـ \'+\'.</string>
+    <string name="error_email">صيغة البريد الإلكتروني غير صالحة.</string>
+    <string name="error_password">يجب أن تتكون كلمة المرور من 6 أحرف على الأقل وتحتوي على حرف ورقم.</string>
+    <string name="error_district">اختر حيًا صالحًا.</string>
+    <string name="error_address">الرجاء اختيار عنوان صالح قبل المتابعة.</string>
+
+    <string name="login_title">تسجيل الدخول</string>
+    <string name="login_email_label">البريد الإلكتروني</string>
+    <string name="login_password_label">كلمة المرور</string>
+    <string name="login_button">تسجيل الدخول</string>
+    <string name="login_signup_prompt">ليس لديك حساب؟ سجل الآن</string>
+    <string name="login_success_message">تم تسجيل الدخول بنجاح كـ %1$s</string>
+    <string name="login_empty_fields_error">لا يمكن أن يكون البريد الإلكتروني وكلمة المرور فارغين.</string>
+    <string name="account_created_success">تم إنشاء الحساب بنجاح! الرجاء تسجيل الدخول للمتابعة.</string>
+
+    <string name="show_password">إظهار كلمة المرور</string>
+    <string name="hide_password">إخفاء كلمة المرور</string>
+
+    <string name="forgot_password">نسيت كلمة المرور؟</string>
+    <string name="forgot_password_title">إعادة تعيين كلمة المرور</string>
+    <string name="forgot_password_instructions">أدخل عنوان بريدك الإلكتروني لتلقي رابط إعادة تعيين كلمة المرور.</string>
+    <string name="send_reset_link">إرسال رابط إعادة التعيين</string>
+    <string name="password_reset_email_sent">تم إرسال بريد إلكتروني لإعادة تعيين كلمة المرور. يرجى التحقق من صندوق الوارد الخاص بك.</string>
+    <string name="password_reset_failed">فشل في إرسال بريد إعادة تعيين. الرجاء المحاولة مرة أخرى.</string>
+    <string name="email_required">البريد الإلكتروني مطلوب</string>
+    <string name="cancel">إلغاء</string>
+
+    <string name="auth_error_incorrect_password">كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.</string>
+    <string name="auth_error_no_account">لم يتم العثور على حساب بهذا البريد الإلكتروني.</string>
+    <string name="auth_error_account_blocked">تم حظر الحساب مؤقتًا. حاول مرة أخرى لاحقًا أو قم بإعادة تعيين كلمة المرور.</string>
+    <string name="auth_error_generic">فشل تسجيل الدخول: %1$s</string>
+    <string name="email_verification_required">يرجى التحقق من بريدك الإلكتروني قبل تسجيل الدخول. تم إرسال رسالة تحقق جديدة.</string>
+
+    <string name="language_settings_title">إعدادات اللغة</string>
+    <string name="select_language">اختر لغتك المفضلة</string>
+    <string name="language_change_info">سيتم إعادة تشغيل التطبيق لتطبيق تغييرات اللغة</string>
+    <string name="back_button">رجوع</string>
+    <string name="settings">الإعدادات</string>
+    <string name="language">اللغة</string>
+
+    <string name="app_title">متجر H2O</string> <string name="loading">جاري التحميل...</string>
+    <string name="error_prefix">خطأ: %1$s</string>
+    <string name="no_products_available">لا توجد منتجات متوفرة</string>
+    <string name="authentication_required">يرجى تسجيل الدخول لعرض المنتجات</string>
+    <string name="product_quantity">الكمية: %1$d</string> <string name="add_to_cart" translatable="false">إضافة %1$s إلى السلة</string>
+    <string name="product_added">تمت إضافة المنتج إلى السلة</string>
+    <string name="product_added_to_cart" translatable="false">تمت إضافة %1$s إلى السلة</string>
+    <string name="product_quantity_increased">تم زيادة كمية المنتج</string>
+    <string name="price_with_currency">%1$.2f جنيه</string>
+    <string name="stock_available">متوفر في المخزون</string>
+    <string name="out_of_stock">غير متوفر في المخزون</string>
+    <string name="in_stock">متوفر في المخزون</string>
+    <string name="price_value">%1$s جنيه</string>
+    <string name="filter_by_brand">التصنيف حسب العلامة التجارية</string>
+    <string name="filter_by_size">التصنيف حسب الحجم (مل)</string>
+    <string name="all_brands">كل العلامات التجارية</string>
+    <string name="all_sizes">كل الأحجام</string>
+    <string name="size_small">صغير (≤600)</string>
+    <string name="size_large">كبير (601-1499)</string>
+    <string name="size_gallon">جالون (≥1500)</string>
+    <string name="no_products_match_filters">لا توجد منتجات تطابق التصنيفات المحددة.</string>
+
+
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_cart">السلة</string>
+    <string name="nav_orders">الطلبات</string>
+    <string name="nav_profile">الملف الشخصي</string>
+    <string name="nav_help">المساعدة</string>
+    <string name="nav_logout">تسجيل الخروج</string>
+
+    <string name="cart_title">سلة التسوق</string>
+    <string name="cart_empty_message">سلة التسوق فارغة</string>
+    <string name="cart_empty_suggestion">أضف بعض زجاجات المياه إلى سلة التسوق وستظهر هنا</string>
+    <string name="cart_total">المجموع: %1$s جنيه</string>
+    <string name="cart_total_label">المجموع</string>
+    <string name="cart_checkout_button">المتابعة إلى الدفع</string>
+    <string name="continue_shopping">مواصلة التسوق</string>
+    <string name="loading_cart">جاري تحميل سلة التسوق…</string>
+
+    <string name="cart_item_price">%1$s جنيه</string>
+    <string name="cart_item_original_price">%1$s جنيه</string>
+    <string name="cart_item_decrease">تقليل</string>
+    <string name="cart_item_increase">زيادة</string>
+    <string name="cart_item_remove" translatable="false">إزالة %1$s</string> <string name="cart_item_list_header">عناصر السلة (%1$d)</string>
+    <string name="discount_percentage">-%1$s%%</string>
+    <string name="brand_label">العلامة التجارية: %1$s</string>
+    <string name="item_total">المجموع: %1$s جنيه</string>
+
+    <string name="order_summary">ملخص الطلب</string>
+    <string name="items_count">العناصر</string>
+    <string name="items_value">%1$d</string>
+    <string name="subtotal">المجموع الفرعي</string>
+    <string name="delivery_fee">رسوم التوصيل</string>
+
+</resources>

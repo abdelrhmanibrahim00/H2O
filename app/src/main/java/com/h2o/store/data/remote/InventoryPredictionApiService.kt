@@ -16,16 +16,22 @@ interface InventoryPredictionApiService {
     suspend fun generateBulkRecommendations(@Body request: BulkPredictionRequest): Response<BulkPredictionResponse>
 }
 
+// Existing class update - ApiModels.kt
 /**
  * Response model for prediction results
  */
 data class PredictionResponse(
     val productId: String,
-    val recommendedStock: Int,
+    val name: String,                 // Added field
+    val brand: String = "Unknown",    // Added field
+    val category: String,             // Added field
+    val currentStock: Int,            // Added field
+    val predictedDemand: Int,         // Added field
+    val recommendedOrder: Int,        // Changed from recommendedStock
+    val safetyStock: Int,             // Added field
     val confidence: Double,
     val message: String
 )
-
 /**
  * Response model for bulk predictions
  */

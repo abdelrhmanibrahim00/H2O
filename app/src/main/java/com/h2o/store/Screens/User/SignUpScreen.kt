@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -86,12 +87,17 @@ fun SignUpScreen(
     val signUpState by viewModel.signUpState.collectAsState()
     val accountType by viewModel.accountType.collectAsState()
 
-
     val userLocation by locationViewModel.location.collectAsState()
     val structuredAddress by locationViewModel.structuredAddress.collectAsState()
     val streetAddress by locationViewModel.streetAddress.collectAsState()
     val locationLoadingState by locationViewModel.locationLoadingState.collectAsState()
     val timeRemaining by locationViewModel.timeRemaining.collectAsState()
+
+    // Get strings from context instead of using stringResource() directly
+    val selectAddressText = remember { context.getString(R.string.signup_select_address) }
+    val locationPermissionRequiredText = remember { context.getString(R.string.signup_location_permission_required) }
+    val locationPermissionSettingsText = remember { context.getString(R.string.signup_location_permission_settings) }
+    val locationErrorText = remember { context.getString(R.string.signup_location_error) }
 
     // Effect to update address display when address data changes
     LaunchedEffect(userLocation, structuredAddress) {
@@ -110,7 +116,7 @@ fun SignUpScreen(
         mutableStateOf(
             if (addressData != null && addressData!!.formattedAddress.isNotEmpty())
                 addressData!!.formattedAddress
-            else "Select Address"
+            else selectAddressText
         )
     }
 
@@ -142,9 +148,17 @@ fun SignUpScreen(
                     Manifest.permission.ACCESS_FINE_LOCATION
                 )
                 if (rationaleRequired) {
-                    Toast.makeText(context, "Location Permission is required", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        locationPermissionRequiredText,
+                        Toast.LENGTH_LONG
+                    ).show()
                 } else {
-                    Toast.makeText(context, "Enable Location Permission in Settings", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        locationPermissionSettingsText,
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -168,7 +182,11 @@ fun SignUpScreen(
             }
             LocationLoadingState.ERROR -> {
                 // Show error toast and reset state
-                Toast.makeText(context, "Error getting location. Please try again.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    locationErrorText,
+                    Toast.LENGTH_SHORT
+                ).show()
                 locationViewModel.resetLocationState()
             }
             else -> {} // No action needed for IDLE or LOADING states
@@ -178,7 +196,7 @@ fun SignUpScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sign Up") },
+                title = { Text(stringResource(R.string.signup_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
@@ -212,7 +230,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { viewModel.onNameChanged(it) },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.signup_name)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
@@ -224,7 +242,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { viewModel.onEmailChanged(it) },
-                        label = { Text("Email") },
+                        label = { Text(stringResource(R.string.signup_email)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
@@ -242,9 +260,9 @@ fun SignUpScreen(
                 // City (Non-editable)
                 item {
                     OutlinedTextField(
-                        value = "Alexandria",
+                        value = stringResource(R.string.signup_alexandria),
                         onValueChange = {},
-                        label = { Text("City") },
+                        label = { Text(stringResource(R.string.signup_city)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = false
@@ -254,7 +272,7 @@ fun SignUpScreen(
                 // District
                 item {
                     Text(
-                        text = "District",
+                        text = stringResource(R.string.signup_district),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -268,7 +286,7 @@ fun SignUpScreen(
                         OutlinedTextField(
                             value = district,
                             onValueChange = { viewModel.onDistrictChanged(it) },
-                            label = { Text("District") },
+                            label = { Text(stringResource(R.string.signup_district)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
@@ -279,10 +297,7 @@ fun SignUpScreen(
                     }
                 }
 
-
-
-// for the Address Section with this improved version
-
+                // Address Section
                 item {
                     when (locationLoadingState) {
                         LocationLoadingState.LOADING -> {
@@ -308,7 +323,7 @@ fun SignUpScreen(
                                     enabled = false
                                 ) {
                                     Text(
-                                        text = "Getting location...",
+                                        text = stringResource(R.string.signup_getting_location),
                                         modifier = Modifier.weight(1f),
                                         color = Color.Gray
                                     )
@@ -329,7 +344,10 @@ fun SignUpScreen(
                                     onClick = { locationViewModel.skipLocationWait() },
                                     modifier = Modifier.padding(start = 4.dp)
                                 ) {
-                                    Text("Skip", style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        stringResource(R.string.signup_skip),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
                                 }
                             }
                         }
@@ -386,7 +404,6 @@ fun SignUpScreen(
 
                 // Account Type dropdown with properly aligned info icon
                 item {
-
                     var expanded by remember { mutableStateOf(false) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -401,7 +418,7 @@ fun SignUpScreen(
                                 value = accountType,
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("Account Type") },
+                                label = { Text(stringResource(R.string.signup_account_type)) },
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                                 },
@@ -417,14 +434,14 @@ fun SignUpScreen(
                                 modifier = Modifier.exposedDropdownSize()
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Home") },
+                                    text = { Text(stringResource(R.string.signup_account_home)) },
                                     onClick = {
                                         viewModel.onAccountTypeChanged("Home")
                                         expanded = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Market") },
+                                    text = { Text(stringResource(R.string.signup_account_market)) },
                                     onClick = {
                                         viewModel.onAccountTypeChanged("Market")
                                         expanded = false
@@ -447,7 +464,7 @@ fun SignUpScreen(
                         onValueChange = {
                             if (it.length <= 15) viewModel.onPhoneChanged(it)
                         },
-                        label = { Text("Phone Number") },
+                        label = { Text(stringResource(R.string.signup_phone)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
@@ -461,7 +478,7 @@ fun SignUpScreen(
                         onValueChange = {
                             if (it.length <= 15) viewModel.onWhatsAppChanged(it)
                         },
-                        label = { Text("WhatsApp Number (Optional)") },
+                        label = { Text(stringResource(R.string.signup_whatsapp)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
@@ -475,14 +492,14 @@ fun SignUpScreen(
                         onClick = { viewModel.signUp() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Sign Up")
+                        Text(text = stringResource(R.string.signup_button))
                     }
                 }
 
                 // Navigate to Login
                 item {
                     TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
-                        Text("Already have an account? Log In")
+                        Text(stringResource(R.string.signup_login_prompt))
                     }
                 }
 
@@ -509,7 +526,7 @@ fun SignUpScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Sign up successful!",
+                                    text = stringResource(R.string.signup_success),
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }

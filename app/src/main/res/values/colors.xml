@@ -7,4 +7,27 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+
+        <!-- App theme colors -->
+        <color name="h2o_blue">#0288D1</color>
+        <color name="h2o_light_blue">#03A9F4</color>
+        <color name="h2o_deep_blue">#01579B</color>
+        <color name="h2o_teal">#80DEEA</color>
+        <color name="h2o_sky_blue">#BBDEFB</color>
+
+        <!-- Functional colors -->
+        <color name="success_green">#4CAF50</color>
+        <color name="error_red">#E53935</color>
+        <color name="warning_amber">#FFC107</color>
+
+        <!-- Placeholder colors -->
+        <color name="placeholder_background">#F0F0F0</color>
+        <color name="placeholder_icon">#BDBDBD</color>
+
+        <!-- Text colors -->
+        <color name="text_primary">#263238</color>
+        <color name="text_secondary">#607D8B</color>
+        <color name="background_light">#F5F5F5</color>
+        <color name="divider_color">#E0E0E0</color>
 </resources>

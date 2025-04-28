@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -152,6 +153,7 @@ fun DetailedReportScreen(
     }
 }
 
+// Existing method update - DetailedReportScreen.kt
 @Composable
 fun PredictionCard(prediction: PredictionResponse) {
     Card(
@@ -162,16 +164,40 @@ fun PredictionCard(prediction: PredictionResponse) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Product ID
+            // Show product name instead of just ID
             Text(
-                text = "Product ID: ${prediction.productId}",
+                text = prediction.name,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
+            )
+
+            // Display product ID as secondary info
+            Text(
+                text = "ID: ${prediction.productId}",
+                fontSize = 12.sp,
+                color = Color.Gray
             )
 
             Divider(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
+
+            // Add current stock information
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Current Stock: ${prediction.currentStock}",
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "Category: ${prediction.category}",
+                    fontSize = 14.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Recommendation information
             Box(
@@ -182,7 +208,7 @@ fun PredictionCard(prediction: PredictionResponse) {
             ) {
                 Column {
                     Text(
-                        text = "Recommended Stock: ${prediction.recommendedStock}",
+                        text = "Recommended Order: ${prediction.recommendedOrder}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -190,8 +216,23 @@ fun PredictionCard(prediction: PredictionResponse) {
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = prediction.message,
+                        text = "Predicted Demand: ${prediction.predictedDemand}",
                         fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Safety Stock: ${prediction.safetyStock}",
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = prediction.message,
+                        fontSize = 13.sp,
+                        fontStyle = FontStyle.Italic
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))

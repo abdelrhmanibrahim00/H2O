@@ -142,6 +142,12 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         viewModelStoreOwner = viewModelStoreOwner
     )
 
+    // Create a SINGLE CartViewModel at the top level of your AppNavHost function
+    val cartViewModel: CartViewModel = viewModel(
+        factory = CartViewModel.Factory(currentUserId),
+        viewModelStoreOwner = viewModelStoreOwner // This is important!
+    )
+
     val manageOrdersViewModel: ManageOrdersViewModel = viewModel(
         factory = ManageOrdersViewModel.Factory(
             orderRepository,
@@ -302,17 +308,13 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         }
 
         composable(Screen.Home.route) {
-            val currentUser1 = FirebaseAuth.getInstance().currentUser
-            val userId = currentUser1?.uid ?: ""
-            val cartViewModel: CartViewModel = viewModel(factory = CartViewModel.Factory(userId))
             HomeScreen(
                 productViewModel = productViewModel,
                 navController = navController,
                 onHomeClick = { navController.navigate(Screen.Home.route) },
                 onCartClick = { navController.navigate(Screen.Cart.route) },
                 onOrderClick = { navController.navigate(Screen.Orders.route) },
-                // Need to create a user-specific CartViewModel here too
-                cartViewModel = cartViewModel,
+                cartViewModel = cartViewModel, // Use the shared ViewModel instance
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
                 onHelpClick = onHelpClick,
                 onLogoutClick = onLogoutClick
@@ -320,36 +322,24 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         }
         // Cart Screen Composable in NavHost
         composable(Screen.Cart.route) {
-            // Use the CartScreenWrapper instead of CartScreen
-            val currentUser2 = FirebaseAuth.getInstance().currentUser
-            val userId = currentUser2?.uid ?: ""
-            val cartViewModel: CartViewModel = viewModel(factory = CartViewModel.Factory(userId))
             CartScreenWrapper(
                 navController = navController,
                 onHomeClick = { navController.navigate(Screen.Home.route) },
                 onCartClick = {},
                 onOrderClick = { navController.navigate(Screen.Orders.route) },
                 onCheckout = {
-                    // Navigate to checkout screen instead of login
                     navController.navigate(Screen.Checkout.route)
                 },
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
                 onHelpClick = onHelpClick,
-                onLogoutClick = onLogoutClick ,
-                cartViewModel = cartViewModel
+                onLogoutClick = onLogoutClick,
+                cartViewModel = cartViewModel // Use the shared ViewModel instance
             )
         }
 
         // Checkout Screen Composable in NavHost
-        // 3. Replace the CheckoutScreenWrapper composable with:
         composable(Screen.Checkout.route) {
-            // Get current user ID from Firebase Auth
-            val currentUser = FirebaseAuth.getInstance().currentUser
-            val userId = currentUser?.uid ?: ""
-
-            // Create CartViewModel for this screen
-            val cartViewModel: CartViewModel = viewModel(factory = CartViewModel.Factory(userId))
-
+            // Use the shared CartViewModel instead of creating a new one
             CheckoutScreenCoordinatorWrapper(
                 navController = navController,
                 onPlaceOrder = {
@@ -371,7 +361,8 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                     navController.navigate(
                         Screen.Payment.createRoute(orderId, totalAmount.toFloat(), true)
                     )
-                }, cartViewModel = cartViewModel,
+                },
+                cartViewModel = cartViewModel, // Use the shared ViewModel instance
                 coordinatorViewModel = checkoutCoordinatorViewModel
             )
         }
@@ -425,15 +416,10 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                 viewModelStoreOwner = viewModelStoreOwner
             )
 
-            // Cart ViewModel (needed for MainScaffold)
-            val cartViewModel: CartViewModel = viewModel(
-                factory = CartViewModel.Factory(userId)
-            )
-
             OrdersScreen(
                 navController = navController,
                 ordersViewModel = ordersViewModel,
-                cartViewModel = cartViewModel,
+                cartViewModel = cartViewModel, // Use the shared instance
                 onBackClick = { /* Not used anymore */ },
                 onOrderDetails = { orderId ->
                     navController.navigate(Screen.OrderDetails.createRoute(orderId))

@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit
  * Singleton Retrofit client for the inventory prediction API
  */
 object PredictionRetrofitClient {
-
-    private const val BASE_URL = "http://192.168.178.62:7860/" // Localhost
+    // Keep using your hardcoded BASE_URL since you're staying with localhost
+    private const val BASE_URL = "http://192.168.178.62:7860/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -19,9 +19,10 @@ object PredictionRetrofitClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS)    // Increased from 30
+        .readTimeout(60, TimeUnit.SECONDS)       // Increased from 30
+        .writeTimeout(60, TimeUnit.SECONDS)      // Increased from 30
+        .retryOnConnectionFailure(true)          // Added retry capability
         .build()
 
     private val retrofit: Retrofit by lazy {

@@ -2,6 +2,9 @@ package com.h2o.store.reusableComposable
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -12,40 +15,39 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.h2o.store.R
 
-
 @Composable
 fun PasswordTextField(
     password: String,
-    onPasswordChange: (String) -> Unit
+    onPasswordChange: (String) -> Unit,
+    label: String = stringResource(R.string.login_password_label),
+    modifier: Modifier = Modifier.fillMaxWidth()
 ) {
-    var isPasswordVisible by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     OutlinedTextField(
         value = password,
         onValueChange = onPasswordChange,
-        label = { Text("Password") },
-        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password,
-            imeAction = ImeAction.Done
-        ),
-        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        modifier = modifier,
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         trailingIcon = {
-            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                Icon(
-                    painter = painterResource(id = if (isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off),
-                    contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
-                    tint = Color.Gray
-                )
+            val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+            val description = if (passwordVisible) {
+                stringResource(R.string.hide_password)
+            } else {
+                stringResource(R.string.show_password)
+            }
+
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(imageVector = image, contentDescription = description)
             }
         }
     )

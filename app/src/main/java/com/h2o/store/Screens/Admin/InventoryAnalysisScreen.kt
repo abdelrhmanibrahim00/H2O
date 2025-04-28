@@ -287,6 +287,7 @@ private fun SuccessStateContent(
     }
 }
 
+// Existing method update - InventoryAnalysisScreen.kt
 @Composable
 private fun ErrorStateContent(
     errorMessage: String,
@@ -310,11 +311,41 @@ private fun ErrorStateContent(
                     color = Color(0xFFB71C1C),
                     fontSize = 16.sp
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Improved error message display
+                val userFriendlyMessage = when {
+                    errorMessage.contains("timeout", ignoreCase = true) ->
+                        "Connection to prediction server timed out. Check your network connection."
+                    errorMessage.contains("connect", ignoreCase = true) ->
+                        "Couldn't connect to prediction server. Server may be offline."
+                    errorMessage.contains("host", ignoreCase = true) ->
+                        "Server host not found. Check your network settings."
+                    errorMessage.contains("No products found", ignoreCase = true) ->
+                        "No products found in database. Please add products first."
+                    else -> errorMessage
+                }
+
                 Text(
-                    text = errorMessage,
+                    text = userFriendlyMessage,
                     color = Color.DarkGray,
                     fontSize = 14.sp
+                )
+
+                // Add troubleshooting tips
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Troubleshooting Tips:",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "• Make sure your prediction server is running\n" +
+                            "• Check your network connection\n" +
+                            "• Verify that your database contains products",
+                    fontSize = 12.sp,
+                    color = Color.DarkGray
                 )
             }
         }
