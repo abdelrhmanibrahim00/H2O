@@ -3,10 +3,12 @@ package com.h2o.store.Navigation
 //import com.h2o.store.ViewModels.Admin.ManageProductsViewModel
 import DeliveryHomeScreen
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -175,12 +177,15 @@ fun AppNavHost(navController: NavHostController, context: Context) {
         ),
         viewModelStoreOwner = viewModelStoreOwner
     )
+
     // 2. Create a coordinator ViewModel in the AppNavHost function
+    // Create a coordinator ViewModel in the AppNavHost function
     val checkoutCoordinatorViewModel: CheckoutCoordinatorViewModel = viewModel(
         factory = CheckoutCoordinatorViewModel.Factory(
+            application = LocalContext.current.applicationContext as Application,
             userId = currentUserId,
             checkoutRepository = CheckoutRepository(),
-            paymentRepository = PaymentRepository(),
+            paymentRepository = PaymentRepository(LocalContext.current.applicationContext),
             userRepository = UserRepository()
         ),
         viewModelStoreOwner = viewModelStoreOwner

@@ -1,5 +1,6 @@
 package com.h2o.store.ViewModels.User
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -15,16 +16,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class PaymentViewModel(
+    private val context: Context,
     private val userId: String,
     private val orderId: String,
     private val cartItems: List<CartItem>,
     private val totalAmount: Double,
     private val hasAddress: Boolean,
-    private val userData: UserData
+    private val userData: UserData,
 ) : ViewModel() {
     private val TAG = "PaymentViewModel"
 
-    private val paymentRepository = PaymentRepository()
+    // Initialize repositories with context
+    private val paymentRepository = PaymentRepository(context)
     private val checkoutRepository = CheckoutRepository()
 
     // Create CartViewModel using Factory instead of direct constructor
@@ -60,18 +63,18 @@ class PaymentViewModel(
             try {
                 Log.d(TAG, "Initiating payment for order: $orderId")
 
-                // Convert user data to PayMob billing data
+                // Convert user data to billing data (method name kept for compatibility)
                 val billingData = paymentRepository.convertAddressToPayMobBilling(userData)
 
-                // Process payment with PayMob
-                val paymentIframeUrl = paymentRepository.processPayment(
+                // Process payment with Stripe
+                val paymentUrl = paymentRepository.processPayment(
                     orderId = orderId,
                     totalAmount = totalAmount,
                     billingData = billingData
                 )
 
-                _paymentUrl.value = paymentIframeUrl
-                Log.d(TAG, "Payment URL generated: $paymentIframeUrl")
+                _paymentUrl.value = paymentUrl
+                Log.d(TAG, "Payment URL generated: $paymentUrl")
             } catch (e: Exception) {
                 Log.e(TAG, "Payment initiation failed: ${e.message}", e)
                 _error.value = "Failed to initiate payment: ${e.message}"
@@ -91,8 +94,8 @@ class PaymentViewModel(
             try {
                 Log.d(TAG, "Payment successful for transaction: $transactionId")
 
-                // Check transaction status
-                val result = paymentRepository.checkTransactionStatus(transactionId)
+                // Check transaction status with Stripe
+                val result = paymentRepository.checkTransactionStatusById(transactionId)
                 _paymentResult.value = result
 
                 if (result.success) {
@@ -156,6 +159,7 @@ class PaymentViewModel(
      * Factory to create PaymentViewModel with required parameters
      */
     class Factory(
+        private val context: Context,
         private val userId: String,
         private val orderId: String,
         private val cartItems: List<CartItem>,
@@ -167,6 +171,7 @@ class PaymentViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PaymentViewModel::class.java)) {
                 return PaymentViewModel(
+                    context = context,
                     userId = userId,
                     orderId = orderId,
                     cartItems = cartItems,

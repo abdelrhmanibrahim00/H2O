@@ -1,11 +1,13 @@
 package com.h2o.store.ViewModels.User
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.h2o.store.data.models.PaymentResult
 import com.h2o.store.data.Cart.CartItem
 import com.h2o.store.data.User.UserData
+import com.h2o.store.data.models.PaymentResult
 import com.h2o.store.repositories.CheckoutRepository
 import com.h2o.store.repositories.PaymentRepository
 import com.h2o.store.repositories.UserRepository
@@ -17,16 +19,17 @@ import java.util.UUID
 
 /**
  * Coordinator ViewModel that coordinates between checkout and payment processes.
- * It manages the state transitions and data sharing between these two processes.
+ * Updated for Stripe integration.
  */
 class CheckoutCoordinatorViewModel(
+    application: Application,
     private val userId: String,
     private val checkoutRepository: CheckoutRepository,
     internal val paymentRepository: PaymentRepository,
     private val userRepository: UserRepository
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
-    // Payment states
+    // Payment states - same as before for compatibility
     sealed class PaymentState {
         object Initial : PaymentState()
         object Loading : PaymentState()
@@ -175,8 +178,8 @@ class CheckoutCoordinatorViewModel(
         }
     }
 
-    // Initiate payment process
-     fun initiatePayment(
+    // Initiate payment process - updated for Stripe
+    fun initiatePayment(
         orderId: String,
         totalAmount: Double,
         cartItems: List<CartItem>
@@ -187,9 +190,17 @@ class CheckoutCoordinatorViewModel(
 
             try {
                 val userData = _userData.value ?: throw IllegalStateException("User data not available")
+
+                if (userData.address == null) {
+                    _error.value = "Shipping address is required to proceed with payment"
+                    _paymentState.value = PaymentState.AddressRequired
+                    return@launch
+                }
+
+                // Convert user address to billing data - same method name for compatibility
                 val billingData = paymentRepository.convertAddressToPayMobBilling(userData)
 
-                // Generate payment URL
+                // Generate Stripe payment URL
                 val paymentIframeUrl = paymentRepository.processPayment(
                     orderId = orderId,
                     totalAmount = totalAmount,
@@ -205,17 +216,12 @@ class CheckoutCoordinatorViewModel(
         }
     }
 
-    // Handle payment success
-    // Inside CheckoutCoordinatorViewModel.kt
-
-    /**
-     * Handle payment success - Stripe version
-     */
+    // Handle payment success - updated for Stripe
     fun handlePaymentSuccess(transactionId: String) {
         viewModelScope.launch {
             try {
-                // Verify transaction with payment gateway
-                val result = paymentRepository.checkTransactionStatus(transactionId)
+                // Verify transaction with Stripe
+                val result = paymentRepository.checkTransactionStatusById(transactionId)
                 _paymentResult.value = result
 
                 if (result.success) {
@@ -273,106 +279,9 @@ class CheckoutCoordinatorViewModel(
         _error.value = null
     }
 
-    /**
-     * Initiate payment process
-     */
-    fun CheckoutCoordinatorViewModel.initiatePayment(
-        orderId: String,
-        totalAmount: Double,
-        cartItems: List<CartItem>
-    ) {
-        viewModelScope.launch {
-            _paymentState.value = PaymentState.Loading
-            _error.value = null
-
-            try {
-                val userData = userData.value ?: throw IllegalStateException("User data not available")
-
-                if (userData.address == null) {
-                    _error.value = "Shipping address is required to proceed with payment"
-                    _paymentState.value = PaymentState.AddressRequired
-                    return@launch
-                }
-
-                val billingData = paymentRepository.convertAddressToPayMobBilling(userData)
-
-                // Generate payment URL
-                val paymentIframeUrl = paymentRepository.processPayment(
-                    orderId = orderId,
-                    totalAmount = totalAmount,
-                    billingData = billingData
-                )
-
-                _paymentUrl.value = paymentIframeUrl
-                _paymentState.value = PaymentState.Ready(paymentIframeUrl)
-            } catch (e: Exception) {
-                _error.value = "Failed to initiate payment: ${e.message}"
-                _paymentState.value = PaymentState.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    /**
-     * Handle payment success
-     */
-    fun CheckoutCoordinatorViewModel.handlePaymentSuccess(transactionId: String) {
-        viewModelScope.launch {
-            try {
-                // Verify transaction with payment gateway
-                val result = paymentRepository.checkTransactionStatus(transactionId)
-                _paymentResult.value = result
-
-                if (result.success) {
-                    // Get cart items and complete order
-                    val cartItems = cartViewModel.cartItems.value
-                    val userData = userData.value
-
-                    if (userData != null && userData.address != null) {
-                        val success = checkoutRepository.placeOrder(
-                            userId = userId,
-                            cartItems = cartItems,
-                            subtotal = cartViewModel.totalPrice.value.toDouble(),
-                            paymentMethod = "Credit Card",
-                            address = userData.address,
-                            userName = userData.name,
-                            userPhone = userData.phone,
-                            userEmail = userData.email
-                        )
-
-                        if (success) {
-                            // Clear cart and set order success
-                            cartViewModel.clearCart()
-                            _orderSuccess.value = true
-                            _paymentState.value = PaymentState.Success(transactionId)
-                        } else {
-                            _error.value = "Payment was successful but order couldn't be saved"
-                        }
-                    } else {
-                        _error.value = "User data or address not available"
-                    }
-                } else {
-                    _error.value = "Payment verification failed: ${result.errorMessage}"
-                }
-            } catch (e: Exception) {
-                _error.value = "Error finalizing payment: ${e.message}"
-            }
-        }
-    }
-
-    /**
-     * Handle payment failure
-     */
-    fun CheckoutCoordinatorViewModel.handlePaymentFailure(errorMessage: String?) {
-        _error.value = errorMessage ?: "Payment was not completed"
-        _paymentResult.value = PaymentResult(
-            success = false,
-            errorMessage = errorMessage ?: "Payment was cancelled or failed"
-        )
-        _paymentState.value = PaymentState.Error(errorMessage ?: "Payment failed")
-    }
-
     // Factory for creating the ViewModel with required dependencies
     class Factory(
+        private val application: Application,
         private val userId: String,
         private val checkoutRepository: CheckoutRepository,
         private val paymentRepository: PaymentRepository,
@@ -382,6 +291,7 @@ class CheckoutCoordinatorViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(CheckoutCoordinatorViewModel::class.java)) {
                 return CheckoutCoordinatorViewModel(
+                    application = application,
                     userId = userId,
                     checkoutRepository = checkoutRepository,
                     paymentRepository = paymentRepository,

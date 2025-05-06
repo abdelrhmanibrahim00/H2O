@@ -2,10 +2,16 @@ package com.h2o.store.Screens.User
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.net.http.SslError
 import android.util.Log
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
+import android.webkit.JsResult
+import android.webkit.SslErrorHandler
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -40,8 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.h2o.store.ViewModels.User.CheckoutCoordinatorViewModel
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 
 /**
  * Wrapper composable that accepts coordinator ViewModel passed from AppNavHost
@@ -68,6 +72,7 @@ fun PaymentScreenCoordinatorWrapper(
 
 /**
  * Payment screen that uses the coordinator ViewModel for state management
+ * Updated to work with Stripe
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +86,7 @@ fun PaymentScreenWithCoordinator(
 ) {
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
-    val TAG = "PaymentScreen"
+    val TAG = "StripePaymentScreen"
 
     // Observe ViewModel states
     val paymentState by coordinatorViewModel.paymentState.collectAsState()
@@ -171,7 +176,7 @@ fun PaymentScreenWithCoordinator(
                 }
             } else if (paymentUrl != null) {
                 // Show payment WebView
-                PaymentWebView(
+                StripePaymentWebView(
                     paymentUrl = paymentUrl!!,
                     onPageStarted = { isWebViewLoaded = false },
                     onPageFinished = { isWebViewLoaded = true },
@@ -199,16 +204,18 @@ fun PaymentScreenWithCoordinator(
         }
     }
 }
-
+/**
+ * WebView specifically configured for Stripe payment flow
+ */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun PaymentWebView(
+fun StripePaymentWebView(
     paymentUrl: String,
     onPageStarted: () -> Unit,
     onPageFinished: () -> Unit,
     onPaymentResult: (success: Boolean, transactionId: String?, errorMsg: String?) -> Unit
 ) {
-    val TAG = "PaymentWebView"
+    val TAG = "StripePaymentWebView"
 
     AndroidView(
         factory = { context ->
@@ -218,20 +225,45 @@ fun PaymentWebView(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
 
-                // Configure WebView settings
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadsImagesAutomatically = true
+                // Enhanced WebView settings for Stripe Checkout
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    javaScriptCanOpenWindowsAutomatically = true
+                    loadsImagesAutomatically = true
+                    // Allow mixed content (http resources on https pages)
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    // Enable database
+                    databaseEnabled = true
+                    // Allow file access and content access
+                    allowFileAccess = true
+                    allowContentAccess = true
+                    // Set cache mode
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    // Set UA to more desktop-like
+                    userAgentString = settings.userAgentString.replace("Mobile", "eliboM").replace("Android", "diordnA")
+                }
 
-                // Set WebView client
+                // Set WebView client with enhanced error handling
                 webViewClient = object : WebViewClient() {
+                    @SuppressLint("WebViewClientOnReceivedSslError")
+                    override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                        // Proceed despite SSL errors (only for development)
+                        handler?.proceed()
+                    }
+
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        // Don't override URL loading in WebView
+                        return false
+                    }
+
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                         super.onPageStarted(view, url, favicon)
                         Log.d(TAG, "Page started loading: $url")
                         onPageStarted()
 
                         // Check if redirected to success or error URLs
-                        checkPaymentResult(url)
+                        url?.let { checkStripePaymentResult(it) }
                     }
 
                     override fun onPageFinished(view: WebView?, url: String?) {
@@ -240,7 +272,7 @@ fun PaymentWebView(
                         onPageFinished()
 
                         // Also check on page finished
-                        checkPaymentResult(url)
+                        url?.let { checkStripePaymentResult(it) }
                     }
 
                     override fun onReceivedError(
@@ -250,58 +282,71 @@ fun PaymentWebView(
                     ) {
                         super.onReceivedError(view, request, error)
                         Log.e(TAG, "WebView error: ${error?.description}")
-                        onPaymentResult(false, null, "Payment error: ${error?.description}")
-                    }
 
-                    private fun checkPaymentResult(url: String?) {
-                        url ?: return
-
-                        Log.d(TAG, "Checking URL for payment result: $url")
-
-                        // PayMob success URL parsing (assumes you've configured success URL in PayMob dashboard)
-                        if (url.contains("success=true") || url.contains("success.html")) {
-                            // Extract transaction ID from URL if present
-                            val transactionId = extractTransactionId(url)
-                            Log.d(TAG, "Payment success detected, transaction ID: $transactionId")
-                            onPaymentResult(true, transactionId ?: "unknown", null)
-                        }
-                        // PayMob failure URL parsing
-                        else if (url.contains("success=false") || url.contains("failure.html")) {
-                            Log.d(TAG, "Payment failure detected")
-                            val errorMsg = extractErrorMessage(url)
-                            onPaymentResult(false, null, errorMsg ?: "Payment failed")
+                        // Only report fatal errors, not resource loading errors
+                        if (request?.isForMainFrame == true) {
+                            onPaymentResult(false, null, "Payment error: ${error?.description}")
                         }
                     }
 
-                    private fun extractTransactionId(url: String): String? {
+                    private fun checkStripePaymentResult(url: String) {
+                        Log.d(TAG, "Checking URL for Stripe payment result: $url")
+
+                        // Success detection
+                        if (url.contains("success") || url.contains("checkout/complete")) {
+                            // Extract payment or session ID
+                            val paymentId = extractStripePaymentId(url) ?: extractStripeSessionId(url)
+                            Log.d(TAG, "Stripe payment success detected, ID: $paymentId")
+                            onPaymentResult(true, paymentId, null)
+                        }
+                        // Cancelation detection
+                        else if (url.contains("cancel") || url.contains("checkout/canceled")) {
+                            Log.d(TAG, "Stripe payment cancelation detected")
+                            onPaymentResult(false, null, "Payment was canceled")
+                        }
+                    }
+
+                    private fun extractStripePaymentId(url: String): String? {
                         return try {
-                            // Extract transaction ID from PayMob response URL
-                            // Format may be like: ?success=true&trx_id=12345
-                            val regex = Regex("[?&]trx_id=([^&]+)")
+                            // Match payment_intent parameter (pi_...)
+                            val regex = Regex("[?&]payment_intent=([^&]+)")
                             val matchResult = regex.find(url)
-                            val value = matchResult?.groups?.get(1)?.value
-                            URLDecoder.decode(value, StandardCharsets.UTF_8.name())
+                            matchResult?.groups?.get(1)?.value
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error extracting transaction ID: ${e.message}", e)
+                            Log.e(TAG, "Error extracting payment ID: ${e.message}", e)
                             null
                         }
                     }
 
-                    private fun extractErrorMessage(url: String): String? {
+                    private fun extractStripeSessionId(url: String): String? {
                         return try {
-                            // Extract error message if present
-                            val regex = Regex("[?&]error=([^&]+)")
+                            // Match session_id parameter (cs_...)
+                            val regex = Regex("[?&]session_id=([^&]+)")
                             val matchResult = regex.find(url)
-                            val value = matchResult?.groups?.get(1)?.value
-                            URLDecoder.decode(value, StandardCharsets.UTF_8.name())
+                            matchResult?.groups?.get(1)?.value
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error extracting error message: ${e.message}", e)
+                            Log.e(TAG, "Error extracting session ID: ${e.message}", e)
                             null
                         }
                     }
                 }
 
+                // Set WebChromeClient to handle JavaScript dialogs, etc.
+                webChromeClient = object : WebChromeClient() {
+                    override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                        Log.d(TAG, "JS Alert: $message")
+                        result?.confirm()
+                        return true
+                    }
+
+                    override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                        Log.d(TAG, "Console: ${consoleMessage?.message()}")
+                        return true
+                    }
+                }
+
                 // Load the payment URL
+                Log.d(TAG, "Loading payment URL: $paymentUrl")
                 loadUrl(paymentUrl)
             }
         },
