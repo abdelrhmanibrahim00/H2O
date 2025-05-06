@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +29,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
-import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -38,14 +38,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -129,7 +128,6 @@ fun CartScreen(
         )
     }
 }
-
 /**
  * Cart content that displays cart items or empty state
  */
@@ -140,28 +138,12 @@ fun CartContent(
     paddingValues: PaddingValues,
     onHomeClick: () -> Unit
 ) {
-    val cartItems by viewModel.cartItems.collectAsState()
+    val cartState by viewModel.cartState.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
 
     // Use M3 color scheme if possible
-    val primaryColor = MaterialTheme.colorScheme.primary // Color(0xFF0288D1)
-    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
-
-    // Simplified loading state based on initial collection
-    var isLoading by remember { mutableStateOf(cartItems.isEmpty()) } // Initial guess
-
-    LaunchedEffect(cartItems) {
-        // Determine loading state based on flow emission
-        // This assumes the initial value of cartItems is emptyList() and stays that way until loaded
-        if (isLoading && cartItems.isNotEmpty()) {
-            isLoading = false
-        } else if (!isLoading && cartItems.isEmpty()) {
-            // If items were loaded and then removed, don't go back to loading
-            isLoading = false
-        }
-        // Consider using viewModel.cartState for explicit Loading/Success/Error states if needed
-    }
-
+    val primaryColor = colorScheme.primary
+    val onPrimaryColor = colorScheme.onPrimary
 
     Column(
         modifier = Modifier
@@ -169,121 +151,164 @@ fun CartContent(
             .padding(paddingValues) // Apply padding from Scaffold
             .padding(horizontal = 16.dp) // Apply horizontal padding for content
     ) {
-        if (isLoading) {
-            // Loading state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 56.dp), // Adjust if needed to avoid overlap with bottom bar
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = primaryColor)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.loading_cart),
-                        style = MaterialTheme.typography.bodyLarge // M3 Typography
-                    )
-                }
-            }
-        } else if (cartItems.isEmpty()) {
-            // Empty cart state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 56.dp), // Adjust padding
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(16.dp)
+        when (cartState) {
+            is CartViewModel.CartState.Loading -> {
+                // Loading state
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 56.dp), // Adjust if needed to avoid overlap with bottom bar
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_empty_cart), // Use a specific drawable
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant // Use theme color
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.cart_empty_message),
-                        style = MaterialTheme.typography.headlineSmall, // M3 Typography
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.cart_empty_suggestion),
-                        style = MaterialTheme.typography.bodyLarge, // M3 Typography
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant // Use theme color
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onHomeClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
-                    ) {
-                        Text(stringResource(R.string.continue_shopping), color = onPrimaryColor)
-                    }
-                }
-            }
-        } else {
-            // Cart with items
-            // Add top padding for the header text
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.cart_item_list_header, cartItems.size),
-                style = MaterialTheme.typography.titleLarge, // M3 Typography
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            LazyColumn(
-                modifier = Modifier.weight(1f), // Takes available space
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp) // Add padding at the bottom of the list
-            ) {
-                items(
-                    items = cartItems,
-                    key = { item -> item.productId } // Stable key
-                ) { item ->
-                    // Simplified animation: just fade in/out on add/remove
-                    AnimatedVisibility(
-                        visible = true, // Keep item visible in list
-                        enter = fadeIn(animationSpec = tween(150)),
-                        exit = fadeOut(animationSpec = tween(150))
-                    ) {
-                        EnhancedCartItemCard(
-                            cartItem = item,
-                            onQuantityChange = { newQuantity ->
-                                viewModel.updateQuantity(item, newQuantity)
-                            },
-                            onRemove = {
-                                viewModel.removeFromCart(item)
-                            },
-                            primaryColor = primaryColor
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = primaryColor)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.loading_cart),
+                            style = typography.bodyLarge // M3 Typography
                         )
                     }
                 }
             }
+            is CartViewModel.CartState.Success -> {
+                val cartItems = (cartState as CartViewModel.CartState.Success).items
 
-            Spacer(modifier = Modifier.height(16.dp)) // Space before summary
+                if (cartItems.isEmpty()) {
+                    // Empty cart state
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 56.dp), // Adjust padding
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_empty_cart), // Use a specific drawable
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = colorScheme.onSurfaceVariant // Use theme color
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.cart_empty_message),
+                                style = MaterialTheme.typography.headlineSmall, // M3 Typography
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.cart_empty_suggestion),
+                                style = MaterialTheme.typography.bodyLarge, // M3 Typography
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // Use theme color
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onHomeClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
+                            ) {
+                                Text(stringResource(R.string.continue_shopping), color = onPrimaryColor)
+                            }
+                        }
+                    }
+                } else {
+                    // Cart with items
+                    // Add top padding for the header text
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.cart_item_list_header, cartItems.size),
+                        style = MaterialTheme.typography.titleLarge, // M3 Typography
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
 
-            // Order summary card
-            OptimizedOrderSummaryCard(
-                itemCount = cartItems.size,
-                totalPrice = totalPrice,
-                primaryColor = primaryColor,
-                onCheckout = onCheckout
-            )
+                    LazyColumn(
+                        modifier = Modifier.weight(1f), // Takes available space
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp) // Add padding at the bottom of the list
+                    ) {
+                        items(
+                            items = cartItems,
+                            key = { item -> item.productId } // Stable key
+                        ) { item ->
+                            // Simplified animation: just fade in/out on add/remove
+                            AnimatedVisibility(
+                                visible = true, // Keep item visible in list
+                                enter = fadeIn(animationSpec = tween(150)),
+                                exit = fadeOut(animationSpec = tween(150))
+                            ) {
+                                EnhancedCartItemCard(
+                                    cartItem = item,
+                                    onQuantityChange = { newQuantity ->
+                                        viewModel.updateQuantity(item, newQuantity)
+                                    },
+                                    onRemove = {
+                                        viewModel.removeFromCart(item)
+                                    },
+                                    primaryColor = primaryColor
+                                )
+                            }
+                        }
+                    }
 
-            Spacer(modifier = Modifier.height(16.dp)) // Space after summary before bottom bar
+                    Spacer(modifier = Modifier.height(16.dp)) // Space before summary
+
+                    // Order summary card
+                    OptimizedOrderSummaryCard(
+                        itemCount = cartItems.size,
+                        totalPrice = totalPrice,
+                        primaryColor = primaryColor,
+                        onCheckout = onCheckout
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp)) // Space after summary before bottom bar
+                }
+            }
+            is CartViewModel.CartState.Error -> {
+                // Error state
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 56.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.error_image), // Use an error icon
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = (cartState as CartViewModel.CartState.Error).message,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { /* TODO: Add retry logic */ },
+                            colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
+                        ) {
+                            Text(stringResource(R.string.retry), color = onPrimaryColor)
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
 /**
  * Order summary card with optimized layout and M3 styling
  */
+@SuppressLint("DefaultLocale")
 @Composable
 private fun OptimizedOrderSummaryCard(
     itemCount: Int,
@@ -296,12 +321,20 @@ private fun OptimizedOrderSummaryCard(
     val onCardContainerColor = MaterialTheme.colorScheme.onSurfaceVariant
     val totalWithDelivery = totalPrice + 15.0 // Assuming delivery fee is fixed at 15.0
 
-    androidx.compose.material3.Surface( // Use M3 Surface
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp), // M3 uses larger corner radii typically
-        color = cardContainerColor,
-        tonalElevation = 1.dp, // M3 elevation concept
-        shadowElevation = 1.dp
+        shape = RoundedCornerShape(12.dp),
+        // Use pure white with no alpha
+        color = Color.White,
+        // Important: Set to 0dp to avoid the tint
+        tonalElevation = 0.dp,
+        // Use shadow elevation for depth instead
+        shadowElevation = 1.dp,
+        // Add the border directly to the surface
+        border = BorderStroke(
+            width = 1.dp,
+            color = colorScheme.primary.copy(alpha = 0.3f)
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -403,7 +436,7 @@ private fun OptimizedOrderSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = primaryColor, // M3 uses containerColor
-                    contentColor = MaterialTheme.colorScheme.onPrimary // M3 uses contentColor
+                    contentColor = colorScheme.onPrimary // M3 uses contentColor
                 )
             ) {
                 Text(stringResource(R.string.cart_checkout_button))
@@ -437,13 +470,22 @@ fun EnhancedCartItemCard(
         originalPriceStrikethrough = null // No original price needed if not discounted
     }
 
+
     // Use M3 Surface for the card background and elevation
-    androidx.compose.material3.Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp), // M3 style corners
-        color = MaterialTheme.colorScheme.surfaceVariant, // M3 card color
-        tonalElevation = 1.dp,
-        shadowElevation = 1.dp
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        // Use pure white with no alpha
+        color = Color.White,
+        // Important: Set to 0dp to avoid the tint
+        tonalElevation = 0.dp,
+        // Use shadow elevation for depth instead
+        shadowElevation = 1.dp,
+        // Add the border directly to the surface
+        border = BorderStroke(
+            width = 1.dp,
+            color = colorScheme.primary.copy(alpha = 0.3f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -452,22 +494,23 @@ fun EnhancedCartItemCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Optimized image loading
+            // Reduced size image for cart items
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(cartItem.imageUrl)
                     .crossfade(true)
-                    .size(80) // Specific size
+                    .size(60) // Reduced from 80 to 60
                     .memoryCacheKey(cartItem.productId)
                     .diskCacheKey(cartItem.productId)
-                    .placeholder(R.drawable.placeholder_image) // Drawable placeholder
-                    .error(R.drawable.error_image) // Drawable error
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.error_image)
                     .build(),
                 contentDescription = cartItem.name,
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp)), // Slightly rounded corners for image
-                contentScale = ContentScale.Crop
+                    .size(60.dp) // Reduced from 80dp to 60dp
+                    .padding(4.dp) // Added padding to give some space
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Fit // Changed from Crop to Fit
             )
 
             // Product details column
@@ -478,11 +521,11 @@ fun EnhancedCartItemCard(
             ) {
                 Text(
                     text = cartItem.name,
-                    style = MaterialTheme.typography.titleMedium, // M3 Typography
+                    style = typography.titleMedium, // M3 Typography
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant // Text color on card
+                    color = colorScheme.onSurfaceVariant // Text color on card
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -490,7 +533,7 @@ fun EnhancedCartItemCard(
                 // *** FIX: Use the pre-calculated displayPrice ***
                 Text(
                     text = stringResource(R.string.price_value, String.format("%.2f", displayPrice)),
-                    style = MaterialTheme.typography.bodyMedium, // M3 Typography
+                    style = typography.bodyMedium, // M3 Typography
                     color = primaryColor, // Use primary color for emphasis
                     fontWeight = FontWeight.Bold
                 )
@@ -501,8 +544,8 @@ fun EnhancedCartItemCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = stringResource(R.string.price_value, String.format("%.2f", original)),
-                            style = MaterialTheme.typography.bodySmall, // M3 Typography
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), // Dimmed color
+                            style = typography.bodySmall, // M3 Typography
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f), // Dimmed color
                             textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
                             modifier = Modifier.padding(end = 4.dp)
                         )
@@ -514,7 +557,7 @@ fun EnhancedCartItemCard(
                             Text(
                                 text = stringResource(R.string.discount_percentage, cartItem.discountPercentage.toString()),
                                 color = Color.Red,
-                                style = MaterialTheme.typography.labelSmall, // M3 Typography
+                                style = typography.labelSmall, // M3 Typography
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             )
                         }
@@ -527,8 +570,8 @@ fun EnhancedCartItemCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.brand_label, cartItem.brand),
-                        style = MaterialTheme.typography.bodySmall, // M3 Typography
-                        color = MaterialTheme.colorScheme.onSurfaceVariant // Text color on card
+                        style = typography.bodySmall, // M3 Typography
+                        color = colorScheme.onSurfaceVariant // Text color on card
                     )
                 }
             }
@@ -551,9 +594,9 @@ fun EnhancedCartItemCard(
                 val itemTotalPrice = displayPrice * cartItem.quantity
                 Text(
                     text = stringResource(R.string.item_total, String.format("%.2f", itemTotalPrice)),
-                    style = MaterialTheme.typography.bodyMedium, // M3 Typography
+                    style = typography.bodyMedium, // M3 Typography
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant // Text color on card
+                    color = colorScheme.onSurfaceVariant // Text color on card
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -566,7 +609,7 @@ fun EnhancedCartItemCard(
                     Icon(
                         Icons.Default.Delete, // Standard M2/M3 icon
                         contentDescription = stringResource(R.string.cart_item_remove, cartItem.name), // Specific description
-                        tint = MaterialTheme.colorScheme.error, // Use M3 error color
+                        tint = colorScheme.error, // Use M3 error color
                         modifier = Modifier.size(20.dp)
                     )
                 }

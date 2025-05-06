@@ -22,5 +22,7 @@ class H2OApp : Application() {
             .setPersistenceEnabled(true)
             .build()
         FirebaseFirestore.getInstance().firestoreSettings = settings
+       // PaymentRepository().initializeStripe(this)
+
     }
 }

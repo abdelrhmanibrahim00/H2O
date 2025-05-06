@@ -85,11 +85,14 @@
     <string name="filter_by_size">التصنيف حسب الحجم (مل)</string>
     <string name="all_brands">كل العلامات التجارية</string>
     <string name="all_sizes">كل الأحجام</string>
-    <string name="size_small">صغير (≤600)</string>
-    <string name="size_large">كبير (601-1499)</string>
-    <string name="size_gallon">جالون (≥1500)</string>
+    <string name="size_small">صغير</string>
+    <string name="size_large">كبير</string>
+    <string name="size_gallon">جالون</string>
     <string name="no_products_match_filters">لا توجد منتجات تطابق التصنيفات المحددة.</string>
-
+    <!-- New and modified strings -->
+    <string name="clear_filters">مسح التصفية</string>
+    <string name="quantity_available">الكمية: %d</string>
+    <string name="sale_percent">-%d%%</string>
 
     <string name="nav_home">الرئيسية</string>
     <string name="nav_cart">السلة</string>
@@ -106,6 +109,8 @@
     <string name="cart_checkout_button">المتابعة إلى الدفع</string>
     <string name="continue_shopping">مواصلة التسوق</string>
     <string name="loading_cart">جاري تحميل سلة التسوق…</string>
+    <string name="retry">حدث خطا ما حاول لاحقا مجددا </string>
+
 
     <string name="cart_item_price">%1$s جنيه</string>
     <string name="cart_item_original_price">%1$s جنيه</string>
@@ -121,5 +126,38 @@
     <string name="items_value">%1$d</string>
     <string name="subtotal">المجموع الفرعي</string>
     <string name="delivery_fee">رسوم التوصيل</string>
+
+    <!-- Checkout screen strings -->
+    <string name="checkout_title">الدفع</string>
+    <string name="back_button_desc">رجوع</string>
+    <string name="more_options_desc">المزيد</string>
+    <string name="additional_options">خيارات إضافية</string>
+    <string name="edit_address">تعديل العنوان</string>
+    <string name="apply_coupon">تطبيق كوبون</string>
+    <string name="shipping_address">عنوان الشحن</string>
+    <string name="no_shipping_address">لم يتم العثور على عنوان للشحن</string>
+    <string name="add_address">إضافة عنوان</string>
+    <string name="payment_method">طريقة الدفع</string>
+    <string name="cash_on_delivery">الدفع عند الاستلام</string>
+    <string name="credit_card">بطاقة ائتمان</string>
+    <string name="place_order">تأكيد الطلب</string>
+    <string name="no_items_checkout">لا توجد عناصر للدفع</string>
+    <string name="quantity_label">الكمية: %d</string>
+    <string name="price_unit" translatable="false">%1$s جنيه</string>
+    <string name="price_total" translatable="false">%1$s جنيه</string>
+    <string name="total_label">المجموع:</string>
+    <string name="delivery_fee_value" translatable="false">%1$s جنيه</string>
+    <string name="checkout_items_empty">سلة التسوق فارغة. أضف عناصر للدفع.</string>
+    <string name="processing_order">جارٍ معالجة الطلب...</string>
+
+    <!-- OrdersScreen strings -->
+    <string name="orders_screen_title">My Orders</string>
+    <string name="order_items_count">%d items</string>
+    <string name="order_number">Order %s</string>
+    <string name="order_placed_on">Placed on: %s</string>
+    <string name="orders_empty_title">No orders found</string>
+    <string name="orders_empty_message">Your order history will appear here once you place an order</string>
+    <string name="order_loading">Loading orders...</string>
+
 
 </resources>

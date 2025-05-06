@@ -3,9 +3,9 @@ package com.h2o.store.ViewModels.User
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.h2o.store.data.models.PaymentResult
 import com.h2o.store.data.Cart.CartItem
 import com.h2o.store.data.User.UserData
-import com.h2o.store.data.models.PaymentResult
 import com.h2o.store.repositories.CheckoutRepository
 import com.h2o.store.repositories.PaymentRepository
 import com.h2o.store.repositories.UserRepository
@@ -22,7 +22,7 @@ import java.util.UUID
 class CheckoutCoordinatorViewModel(
     private val userId: String,
     private val checkoutRepository: CheckoutRepository,
-    private val paymentRepository: PaymentRepository,
+    internal val paymentRepository: PaymentRepository,
     private val userRepository: UserRepository
 ) : ViewModel() {
 
@@ -206,6 +206,11 @@ class CheckoutCoordinatorViewModel(
     }
 
     // Handle payment success
+    // Inside CheckoutCoordinatorViewModel.kt
+
+    /**
+     * Handle payment success - Stripe version
+     */
     fun handlePaymentSuccess(transactionId: String) {
         viewModelScope.launch {
             try {
@@ -216,7 +221,7 @@ class CheckoutCoordinatorViewModel(
                 if (result.success) {
                     // Get cart items and complete order
                     val cartItems = cartViewModel.cartItems.value
-                    val userData = _userData.value
+                    val userData = userData.value
 
                     if (userData != null && userData.address != null) {
                         val success = checkoutRepository.placeOrder(

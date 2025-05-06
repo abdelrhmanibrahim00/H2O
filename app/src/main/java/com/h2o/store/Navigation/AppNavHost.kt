@@ -58,6 +58,7 @@ import com.h2o.store.ViewModels.InventoryAnalysisViewModel
 import com.h2o.store.ViewModels.Location.LocationViewModel
 import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.ViewModels.User.CheckoutCoordinatorViewModel
+import com.h2o.store.ViewModels.User.LoginViewModel
 import com.h2o.store.ViewModels.User.OrdersViewModel
 import com.h2o.store.ViewModels.User.ProductViewModel
 import com.h2o.store.ViewModels.User.ProfileViewModel
@@ -120,9 +121,16 @@ fun AppNavHost(navController: NavHostController, context: Context) {
     )
 
 
+
     // Create SignUpViewModel
     val signUpViewModel: SignUpViewModel = viewModel(
         factory = SignUpViewModel.Factory(authRepository),
+        viewModelStoreOwner = viewModelStoreOwner
+    )
+
+    // Login ViewModel
+    val loginViewModel: LoginViewModel = viewModel(
+        factory = LoginViewModel.Factory(authRepository),
         viewModelStoreOwner = viewModelStoreOwner
     )
 
@@ -239,7 +247,9 @@ fun AppNavHost(navController: NavHostController, context: Context) {
                     }
                 },
                 onNavigateToSignUp = { navController.navigate(Screen.SignUp.route) },
-                prefilledEmail = email
+                prefilledEmail = email ,
+                loginViewModel = loginViewModel
+
             )
         }
 
@@ -343,6 +353,7 @@ fun AppNavHost(navController: NavHostController, context: Context) {
             CheckoutScreenCoordinatorWrapper(
                 navController = navController,
                 onPlaceOrder = {
+
                     // After successful order placement, navigate back to home
                     navController.navigate(Screen.Home.route) {
                         // Clear the back stack up to Home to prevent going back to checkout

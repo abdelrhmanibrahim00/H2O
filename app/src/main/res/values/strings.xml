@@ -85,13 +85,16 @@
     <string name="price_value">%1$s EGP</string>
     <string name="filter_by_brand">Filter by Brand</string>
     <string name="filter_by_size">Filter by Size (ml)</string>
-    <string name="all_brands">All Brands</string>
-    <string name="all_sizes">All Sizes</string>
-    <string name="size_small">Small (≤600)</string>
-    <string name="size_large">Large (601-1499)</string>
-    <string name="size_gallon">Gallon (≥1500)</string>
+    <string name="all_brands">Filter by Brand</string>
+    <string name="all_sizes">Filter by Size</string>
+    <string name="size_small">Small</string>
+    <string name="size_large">Large</string>
+    <string name="size_gallon">Gallon</string>
     <string name="no_products_match_filters">No products match the selected filters.</string>
-
+    <!-- New and modified strings -->
+    <string name="clear_filters">Clear Filters</string>
+    <string name="quantity_available">Quantity: %d</string>
+    <string name="sale_percent">-%d%%</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_cart">Cart</string>
@@ -108,12 +111,16 @@
     <string name="cart_checkout_button">Proceed to Checkout</string>
     <string name="continue_shopping">Continue Shopping</string>
     <string name="loading_cart">Loading your cart…</string>
+    <string name="retry">Error please try later </string>
+
+
 
     <string name="cart_item_price">%1$s EGP</string>
     <string name="cart_item_original_price">%1$s EGP</string>
     <string name="cart_item_decrease">Decrease</string>
     <string name="cart_item_increase">Increase</string>
-    <string name="cart_item_remove" translatable="false">Remove %1$s</string> <string name="cart_item_list_header">Cart Items (%1$d)</string>
+    <string name="cart_item_remove" translatable="false">Remove %1$s</string>
+    <string name="cart_item_list_header">Cart Items (%1$d)</string>
     <string name="discount_percentage">-%1$s%%</string>
     <string name="brand_label">Brand: %1$s</string>
     <string name="item_total">Total: %1$s EGP</string>
@@ -123,5 +130,39 @@
     <string name="items_value">%1$d</string>
     <string name="subtotal">Subtotal</string>
     <string name="delivery_fee">Delivery Fee</string>
+
+    <!-- Checkout screen strings -->
+    <string name="checkout_title">Checkout</string>
+    <string name="back_button_desc">Back</string>
+    <string name="more_options_desc">More</string>
+    <string name="additional_options">Additional Options</string>
+    <string name="edit_address">Edit Address</string>
+    <string name="apply_coupon">Apply Coupon</string>
+    <string name="shipping_address">Shipping Address</string>
+    <string name="no_shipping_address">No shipping address found</string>
+    <string name="add_address">Add Address</string>
+    <string name="payment_method">Payment Method</string>
+    <string name="cash_on_delivery">Cash on Delivery</string>
+    <string name="credit_card">Credit Card</string>
+    <string name="place_order">Place Order</string>
+    <string name="no_items_checkout">No items to checkout</string>
+    <string name="quantity_label">Qty: %d</string>
+    <string name="price_unit" translatable="false">%1$s EGP</string>
+    <string name="price_total" translatable="false">%1$s EGP</string>
+    <string name="total_label">Total:</string>
+    <string name="delivery_fee_value" translatable="false">%1$s EGP</string>
+    <string name="checkout_items_empty">Your cart is empty. Add items to checkout.</string>
+    <string name="processing_order">Processing order...</string>
+
+    <!-- OrdersScreen strings -->
+    <string name="orders_screen_title">My Orders</string>
+    <string name="order_items_count">%d items</string>
+    <string name="order_number">Order %s</string>
+    <string name="order_placed_on">Placed on: %s</string>
+    <string name="orders_empty_title">No orders found</string>
+    <string name="orders_empty_message">Your order history will appear here once you place an order</string>
+    <string name="order_loading">Loading orders...</string>
+
+
 
 </resources>

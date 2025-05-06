@@ -1,5 +1,6 @@
 package com.h2o.store.data.models
 
+
 /**
  * PayMob API authentication request model
  */

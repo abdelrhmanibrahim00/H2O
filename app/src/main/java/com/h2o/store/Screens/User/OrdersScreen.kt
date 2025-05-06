@@ -34,12 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.h2o.store.R
 import com.h2o.store.ViewModels.User.CartViewModel
 import com.h2o.store.ViewModels.User.OrdersViewModel
 import com.h2o.store.components.MainScaffold
@@ -74,7 +76,7 @@ fun OrdersScreen(
     MainScaffold(
         navController = navController,
         cartViewModel = cartViewModel,
-        title = "My Orders",
+        title = stringResource(R.string.orders_screen_title),
         onHomeClick = onHomeClick,
         onCartClick = onCartClick,
         onOrderClick = onOrderClick,
@@ -154,13 +156,13 @@ fun OrdersList(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "No orders found",
+                        text = stringResource(R.string.orders_empty_title),
                         style = MaterialTheme.typography.h5,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Your order history will appear here once you place an order",
+                        text = stringResource(R.string.orders_empty_message),
                         style = MaterialTheme.typography.body1,
                         textAlign = TextAlign.Center
                     )
@@ -211,7 +213,7 @@ fun OrderItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Order ${ordersViewModel.getFormattedOrderId(order.orderId)}",
+                    text = stringResource(R.string.order_number, ordersViewModel.getFormattedOrderId(order.orderId)),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.subtitle1
                 )
@@ -235,7 +237,7 @@ fun OrderItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Placed on: ${ordersViewModel.getFormattedOrderDate(order)}",
+                text = stringResource(R.string.order_placed_on, ordersViewModel.getFormattedOrderDate(order)),
                 style = MaterialTheme.typography.body2
             )
 
@@ -284,12 +286,12 @@ fun OrderItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${order.items.sumOf { it.quantity }} items",
+                    text = stringResource(R.string.order_items_count, order.items.sumOf { it.quantity }),
                     style = MaterialTheme.typography.body2
                 )
 
                 Text(
-                    text = "${order.total} EGP",
+                    text = stringResource(R.string.price_value, order.total),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.subtitle1
                 )

@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.h2o.store.R
 import com.h2o.store.ViewModels.User.LoginState
@@ -43,7 +42,7 @@ fun LoginScreen(
     onLoginSuccess: (String) -> Unit,
     onNavigateToSignUp: () -> Unit,
     prefilledEmail: String? = null,
-    loginViewModel: LoginViewModel = viewModel(factory = LoginViewModel.Factory(AuthRepository()))
+    loginViewModel: LoginViewModel
 ) {
     val context = LocalContext.current
     val email by loginViewModel.email.collectAsState()
@@ -192,9 +191,8 @@ fun LoginScreen(
 
         // Forgot Password Button
         TextButton(
-            onClick = { showForgotPasswordDialog = true },
-            modifier = Modifier.align(Alignment.End)
-        ) {
+            onClick = { showForgotPasswordDialog = true }
+       ) {
             Text(stringResource(R.string.forgot_password))
         }
 

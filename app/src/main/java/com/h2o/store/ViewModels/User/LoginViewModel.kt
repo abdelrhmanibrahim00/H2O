@@ -45,7 +45,8 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
     fun login() {
         if (_email.value.isEmpty() || _password.value.isEmpty()) {
-            _loginState.value = LoginState.Error(R.string.login_empty_fields_error.toString())
+            // Use a proper error message string instead of resource ID toString
+            _loginState.value = LoginState.Error("Please enter both email and password")
             _errorMessageResId.value = R.string.login_empty_fields_error
             return
         }
@@ -61,7 +62,8 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
                         _loginState.value = LoginState.Success(result.role ?: "user")
                         _errorMessageResId.value = null
                     } else {
-                        _loginState.value = LoginState.Error(result.errorMessage ?: "Login failed.")
+                        // Use the error message directly instead of resource ID
+                        _loginState.value = LoginState.Error(result.errorMessage ?: "Login failed")
 
                         // Set the appropriate error message resource ID
                         _errorMessageResId.value = when {
@@ -78,8 +80,8 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                // Handle any unexpected exceptions
-                _loginState.value = LoginState.Error("Login error: ${e.message}")
+                // Handle any unexpected exceptions with a clear error message
+                _loginState.value = LoginState.Error("Login failed: ${e.message ?: "Unknown error"}")
                 _errorMessageResId.value = R.string.auth_error_generic
             }
         }

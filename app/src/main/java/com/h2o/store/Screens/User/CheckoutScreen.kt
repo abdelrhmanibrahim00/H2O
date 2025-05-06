@@ -1,5 +1,6 @@
 package com.h2o.store.Screens.User
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
@@ -32,10 +32,14 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults.cardColors
+import androidx.compose.material3.CardDefaults.cardElevation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -61,6 +65,7 @@ import com.h2o.store.ViewModels.User.CheckoutCoordinatorViewModel
 import com.h2o.store.data.Cart.CartItem
 import com.h2o.store.data.User.UserData
 import kotlinx.coroutines.launch
+
 
 /**
  * Checkout screen using the coordinator pattern for better data sharing
@@ -299,7 +304,15 @@ fun CheckoutContent(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = 2.dp
+                shape = RoundedCornerShape(8.dp),  // or shapes.medium
+                elevation = cardElevation(defaultElevation = 0.04.dp),
+                colors = cardColors(
+                    containerColor = Color.White
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = colorScheme.primary.copy(alpha = 0.3f)
+                )
             ) {
                 Box(
                     modifier = Modifier
@@ -358,8 +371,16 @@ fun CheckoutContent(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = 2.dp
-            ) {
+                shape = RoundedCornerShape(8.dp),  // or shapes.medium
+                elevation = cardElevation(defaultElevation = 0.04.dp),
+                colors = cardColors(
+                    containerColor = Color.White
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = colorScheme.primary.copy(alpha = 0.3f)
+                )
+            )  {
                 Column(modifier = Modifier.padding(8.dp)) {
                     paymentOptions.forEach { payment ->
                         Row(
@@ -390,8 +411,16 @@ fun CheckoutContent(
             // Order total and place order button
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = 4.dp
-            ) {
+                shape = RoundedCornerShape(8.dp),  // or shapes.medium
+                elevation = cardElevation(defaultElevation = 0.04.dp),
+                colors = cardColors(
+                    containerColor = Color.White
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = colorScheme.primary.copy(alpha = 0.3f)
+                )
+            )  {
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
@@ -466,14 +495,23 @@ fun CheckoutContent(
         }
     }
 }
+
 @Composable
 private fun CheckoutItemCard(
     cartItem: CartItem
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = 2.dp
-    ) {
+        shape = RoundedCornerShape(8.dp),  // or shapes.medium
+        elevation = cardElevation(defaultElevation = 0.04.dp),
+        colors = cardColors(
+            containerColor = Color.White
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = colorScheme.primary.copy(alpha = 0.3f)
+        )
+    )  {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

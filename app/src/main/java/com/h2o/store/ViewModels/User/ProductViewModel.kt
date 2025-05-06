@@ -183,7 +183,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
                 Log.d(TAG, "Successfully fetched ${products.size} products")
 
                 // Extract unique brands
-                val brands = products.mapNotNull { it.brand?.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
+                val brands = products.map { it.brand.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
 
                 _productState.update { currentState ->
                     currentState.copy(
@@ -214,8 +214,8 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             val sizeMatch = when (sizeFilter) {
                 SizeFilter.All -> true
                 SizeFilter.Small -> (product.category?.toIntOrNull() ?: 0) <= 600
-                SizeFilter.Large -> (product.category?.toIntOrNull() ?: 0).let { it > 600 && it < 1500 }
-                SizeFilter.Gallon -> (product.category?.toIntOrNull() ?: 0) >= 1500
+                SizeFilter.Large -> (product.category?.toIntOrNull() ?: 0).let { it > 600 && it <= 1500 }
+                SizeFilter.Gallon -> (product.category?.toIntOrNull() ?: 0) > 1500
             }
             brandMatch && sizeMatch
         }

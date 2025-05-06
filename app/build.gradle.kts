@@ -146,6 +146,9 @@ dependencies {
     // Gson for JSON serialization/deserialization
     implementation ("com.google.code.gson:gson:2.10.1")
 
+    // Stripe Android SDK
+    implementation ("com.stripe:stripe-android:20.25.8")
+
     // Update to the latest versions
 //    implementation ("com.google.android.gms:play-services-auth:20.7.0")
 //    implementation ("com.google.firebase:firebase-auth:22.3.0")

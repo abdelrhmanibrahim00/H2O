@@ -11,38 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.Badge
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.BadgedBox
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.BottomNavigation
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.BottomNavigationItem
-import androidx.compose.material.ExperimentalMaterialApi
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.Icon
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.IconButton
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.MaterialTheme
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ModalBottomSheetLayout
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ModalBottomSheetState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ModalBottomSheetValue
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.Scaffold
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ScaffoldState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.Text
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.TextButton
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Help
@@ -55,18 +23,35 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.rememberModalBottomSheetState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -80,8 +65,9 @@ import kotlinx.coroutines.launch
 /**
  * Main scaffold with drawer, bottom sheet, and bottom navigation
  * Used for main screens in the app
+ * Converted to use Material3 components
  */
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(
     navController: NavHostController,
@@ -96,99 +82,124 @@ fun MainScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     // Initialize necessary components
-    val scaffoldState = rememberScaffoldState()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     // Get current navigation state
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Remember modal bottom sheet state
-    val modalBottomSheetState = rememberModalBottomSheetState(
-        initialValue = ModalBottomSheetValue.Hidden
+    // State for bottom sheet
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val bottomSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
     )
 
-    ModalBottomSheetLayout(
-        sheetState = modalBottomSheetState,
-        sheetContent = {
-            BottomSheetContent()
-        }
+    // Apply the system UI controllers to match theme
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding(), // This handles both top and bottom system bars
-            scaffoldState = scaffoldState,
-            topBar = {
-                AppTopBar(
-                    title = title,
-                    scaffoldState = scaffoldState,
-                    scope = scope,
-                    modalBottomSheetState = modalBottomSheetState
-                )
-            },
-            bottomBar = {
-                AppBottomBar(
-                    navController = navController,
-                    currentRoute = currentRoute,
-                    cartViewModel = cartViewModel,
-                    onHomeClick = onHomeClick,
-                    onCartClick = onCartClick,
-                    onOrderClick = onOrderClick
-                )
-            },
+        ModalNavigationDrawer(
+            drawerState = drawerState,
             drawerContent = {
-                DrawerContent(
-                    navController = navController,
-                    scaffoldState = scaffoldState,
-                    scope = scope,
-                    onProfileClick = onProfileClick,
-                    onHelpClick = onHelpClick,
-                    onLogoutClick = onLogoutClick
-                )
+                ModalDrawerSheet {
+                    DrawerContent(
+                        navController = navController,
+                        drawerState = drawerState,
+                        scope = scope,
+                        onProfileClick = onProfileClick,
+                        onHelpClick = onHelpClick,
+                        onLogoutClick = onLogoutClick
+                    )
+                }
             }
-        ) { paddingValues ->
-            content(paddingValues)
+        ) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    AppTopBar(
+                        title = title,
+                        drawerState = drawerState,
+                        scope = scope,
+                        onShowBottomSheet = { showBottomSheet = true }
+                    )
+                },
+                bottomBar = {
+                    AppBottomBar(
+                        navController = navController,
+                        currentRoute = currentRoute,
+                        cartViewModel = cartViewModel,
+                        onHomeClick = onHomeClick,
+                        onCartClick = onCartClick,
+                        onOrderClick = onOrderClick
+                    )
+                },
+                containerColor = MaterialTheme.colorScheme.background
+            ) { paddingValues ->
+                content(paddingValues)
+
+                // Bottom sheet
+                if (showBottomSheet) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showBottomSheet = false },
+                        sheetState = bottomSheetState
+                    ) {
+                        BottomSheetContent()
+                    }
+                }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppTopBar(
     title: String,
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     scope: CoroutineScope,
-    modalBottomSheetState: ModalBottomSheetState
+    onShowBottomSheet: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.statusBarsPadding() // Specific padding for status bar
-    ) {
-        TopAppBar(
-            title = { Text(text = title) },
-            navigationIcon = {
-                IconButton(onClick = {
-                    scope.launch { scaffoldState.drawerState.open() }
-                }) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu")
-                }
-            },
-            actions = {
-                IconButton(onClick = {
-                    scope.launch {
-                        if (modalBottomSheetState.isVisible) {
-                            modalBottomSheetState.hide()
-                        } else {
-                            modalBottomSheetState.show()
-                        }
-                    }
-                }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
-                }
+    // Add modifier.statusBarsPadding() to properly align with status bar
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = {
+                scope.launch { drawerState.open() }
+            }) {
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
+        },
+        actions = {
+            IconButton(onClick = { onShowBottomSheet() }) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "More",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        },
+        colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimary
         )
-    }
+    )
 }
+
+
+
 
 @Composable
 private fun AppBottomBar(
@@ -200,9 +211,12 @@ private fun AppBottomBar(
     onOrderClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.navigationBarsPadding() // Specific padding for navigation bar
+        modifier = Modifier.navigationBarsPadding(), // Specific padding for navigation bar
+        color = MaterialTheme.colorScheme.primary
     ) {
-        BottomNavigation {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.primary
+        ) {
             val navItems = listOf(
                 BottomNavItem(Screen.Home, { onHomeClick() }, "Home", Icons.Default.Home),
                 BottomNavItem(Screen.Cart, { onCartClick() }, "Cart", Icons.Default.ShoppingCart),
@@ -210,7 +224,7 @@ private fun AppBottomBar(
             )
 
             navItems.forEach { (screen, onClick, label, icon) ->
-                BottomNavigationItem(
+                NavigationBarItem(
                     selected = currentRoute == screen.route,
                     onClick = { onClick() },
                     icon = {
@@ -221,10 +235,7 @@ private fun AppBottomBar(
                                     val cartItemCount by cartViewModel.cartItems.collectAsState()
                                     if (cartItemCount.isNotEmpty()) {
                                         Badge {
-                                            Text(
-                                                text = cartItemCount.size.toString(),
-                                                style = MaterialTheme.typography.caption
-                                            )
+                                            Text(text = cartItemCount.size.toString())
                                         }
                                     }
                                 }
@@ -237,18 +248,24 @@ private fun AppBottomBar(
                         }
                     },
                     label = { Text(label) },
-                    selectedContentColor = Color.White,
-                    unselectedContentColor = Color.Gray
+                    colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                        unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                        selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                        unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawerContent(
     navController: NavController,
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     scope: CoroutineScope,
     onProfileClick: () -> Unit,
     onHelpClick: () -> Unit,
@@ -261,7 +278,7 @@ fun DrawerContent(
     ) {
         Text(
             "Menu",
-            style = MaterialTheme.typography.h6,
+            style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier
                 .padding(bottom = 24.dp)
                 .padding(start = 8.dp)
@@ -272,7 +289,7 @@ fun DrawerContent(
             onClick = {
                 scope.launch {
                     onProfileClick()
-                    scaffoldState.drawerState.close()
+                    drawerState.close()
                 }
             },
             modifier = Modifier
@@ -293,7 +310,7 @@ fun DrawerContent(
                 )
                 Text(
                     text = "Profile",
-                    style = MaterialTheme.typography.body1
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
@@ -303,7 +320,7 @@ fun DrawerContent(
             onClick = {
                 scope.launch {
                     onHelpClick()
-                    scaffoldState.drawerState.close()
+                    drawerState.close()
                 }
             },
             modifier = Modifier
@@ -324,16 +341,16 @@ fun DrawerContent(
                 )
                 Text(
                     text = "Help",
-                    style = MaterialTheme.typography.body1
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
 
-        // Logout button with confirmation dialog
-        LogoutButton(
+        // Logout button
+        TextButton(
             onClick = {
                 scope.launch {
-                    scaffoldState.drawerState.close()
+                    drawerState.close()
                     onLogoutClick()
                 }
             },
@@ -355,7 +372,7 @@ fun DrawerContent(
                 )
                 Text(
                     text = "Log out",
-                    style = MaterialTheme.typography.body1
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
@@ -366,12 +383,12 @@ fun DrawerContent(
 fun BottomSheetContent() {
     Column(
         Modifier
-            .padding(start = 16.dp, end = 32.dp, top = 24.dp)
+            .padding(start = 16.dp, end = 32.dp, top = 24.dp, bottom = 36.dp)
             .navigationBarsPadding() // Shifts content above navigation bar
     ) {
         Text(
             "Options",
-            style = MaterialTheme.typography.h6,
+            style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier
                 .padding(bottom = 32.dp)
                 .padding(start = 8.dp)
@@ -398,7 +415,7 @@ fun BottomSheetContent() {
                 )
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.body1
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
@@ -408,7 +425,7 @@ fun BottomSheetContent() {
     }
 }
 
-// Data classes for the bottom navigation and drawer items
+// Data class for the bottom navigation items
 data class BottomNavItem(
     val screen: Screen,
     val onClick: () -> Unit,
