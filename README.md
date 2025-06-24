@@ -1,4 +1,4 @@
-# H2O Store: Smart Inventory Management Solution
+# H2O Store
 
 > **Development Status**: This application is currently in early development (approximately 70% complete). User functionalities are mostly implemented, but admin and delivery personnel features are still under development.
 
